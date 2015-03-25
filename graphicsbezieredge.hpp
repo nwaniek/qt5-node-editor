@@ -9,8 +9,7 @@
 class QGraphicsDropShadowEffect;
 class QGraphicsSceneMouseEvent;
 class GraphicsNode;
-class GraphicsNodeSink;
-class GraphicsNodeSource;
+class GraphicsNodeSocket;
 
 
 class GraphicsBezierEdge : public QGraphicsPathItem
@@ -22,11 +21,11 @@ public:
 	GraphicsBezierEdge(QPoint start, QPoint stop, float factor=0.5f);
 	GraphicsBezierEdge(QPointF start, QPointF stop, float factor=0.5f);
 	GraphicsBezierEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, float factor=0.5f);
-	GraphicsBezierEdge(GraphicsNodeSource *source, GraphicsNodeSink *sink, float factor=0.5f);
+	GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, float factor=0.5f);
 
 	~GraphicsBezierEdge();
 
-	void connect(GraphicsNodeSource *source, GraphicsNodeSink *sink);
+	void connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink);
 	void connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid);
 
 	void set_start(int x0, int y0);

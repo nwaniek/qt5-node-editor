@@ -6,7 +6,9 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsDropShadowEffect>
 #include <iostream>
+
 #include "graphicsnode.hpp"
+#include "graphicsnodesocket.hpp"
 
 
 GraphicsBezierEdge::
@@ -50,7 +52,7 @@ GraphicsBezierEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid,
 }
 
 GraphicsBezierEdge::
-GraphicsBezierEdge(GraphicsNodeSource *source, GraphicsNodeSink *sink, float factor)
+GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, float factor)
 : GraphicsBezierEdge(0, 0, 0, 0, factor)
 {
 	connect(source, sink);
@@ -149,7 +151,7 @@ connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
 }
 
 void GraphicsBezierEdge::
-connect(GraphicsNodeSource *source, GraphicsNodeSink *sink)
+connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 {
 	source->set_edge(this);
 	sink->set_edge(this);

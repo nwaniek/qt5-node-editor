@@ -91,11 +91,12 @@ mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 void GraphicsNodeSource::
 mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+	/*
 	if (_edge) {
 		scene()->removeItem(_edge);
 		delete _edge;
 		_edge = nullptr;
-	}
+	}*/
 }
 
 
@@ -116,10 +117,12 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 
 			// if there is no edge here, create a new one
+			/*
 			if (!_edge) {
 				_edge = new GraphicsBezierEdge(mapToScene(0, 0), mapToScene(event->pos()));
 				scene()->addItem(_edge);
 			}
+			*/
 
 		}
 		else {

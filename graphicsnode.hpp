@@ -12,14 +12,13 @@
 #include <QVariant>
 #include <QString>
 
-#include "graphicsnodesink.hpp"
-#include "graphicsnodesource.hpp"
-
 
 class QPushButton;
 class QGraphicsSceneMouseEvent;
 class QGraphicsDropShadowEffect;
 class GraphicsBezierEdge;
+
+class GraphicsNodeSocket;
 
 
 class GraphicsNode : public QGraphicsItem
@@ -35,10 +34,10 @@ public:
 
 
 	// add a sink to this node
-	const GraphicsNodeSink* add_sink();
-	const GraphicsNodeSink* add_sink(const QString &text);
+	const GraphicsNodeSocket* add_sink();
+	const GraphicsNodeSocket* add_sink(const QString &text);
 
-	const GraphicsNodeSource* add_source(const QString &text);
+	const GraphicsNodeSocket* add_source(const QString &text);
 
 	// connecting sources and sinks
 	void connect_source(int i, GraphicsBezierEdge *edge);
@@ -50,19 +49,23 @@ protected:
 	virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 private:
+	qreal _width;
+	qreal _height;
+
 	QPen _pen_default;
 	QPen _pen_selected;
 	QPen _pen_sources;
 	QPen _pen_sinks;
 
+	QBrush _brush_title;
 	QBrush _brush_background;
 	QBrush _brush_sources;
 	QBrush _brush_sinks;
 
 	QGraphicsDropShadowEffect *_effect;
 
-	std::vector<GraphicsNodeSource*> _sources;
-	std::vector<GraphicsNodeSink*> _sinks;
+	std::vector<GraphicsNodeSocket*> _sources;
+	std::vector<GraphicsNodeSocket*> _sinks;
 
 };
 

@@ -29,6 +29,8 @@ set(SRC
 	graphicsnodescene.cpp
 	graphicsnodesink.cpp
 	graphicsnodesource.cpp
+
+	graphicsnodesocket.cpp
 	)
 set(HEADERS
 	mainwindow.hpp
@@ -39,6 +41,8 @@ set(HEADERS
 	graphicsnodescene.hpp
 	graphicsnodesink.hpp
 	graphicsnodesource.hpp
+
+	graphicsnodesocket.hpp
 )
 
 # include(${QT_USE_FILE})

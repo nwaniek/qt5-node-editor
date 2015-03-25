@@ -1,4 +1,4 @@
-#include "graphicsnodesink.hpp"
+#include "graphicsnodesocket.hpp"
 #include <QPainter>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsScene>
@@ -14,16 +14,18 @@ static const qreal circle_radius = 6.0;
 static const qreal text_offset = 3.0;
 
 
-GraphicsNodeSink::
-GraphicsNodeSink(QGraphicsItem *parent)
-: GraphicsNodeSink("", parent)
+GraphicsNodeSocket::
+GraphicsNodeSocket(GraphicsNodeSocketType type, QGraphicsItem *parent)
+: GraphicsNodeSocket(type, "", parent)
 { }
 
 
-GraphicsNodeSink::
-GraphicsNodeSink(const QString &text, QGraphicsItem *parent)
+GraphicsNodeSocket::
+GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent)
 : QGraphicsItem(parent)
+, _socket_type(socket_type)
 , _pen_circle(QColor("#FF000000"))
+, _pen_text(QColor("#FFFFFFFF"))
 , _brush_circle(QColor("#FF0077FF"))
 , _text(text)
 , _edge(nullptr)
@@ -31,8 +33,13 @@ GraphicsNodeSink(const QString &text, QGraphicsItem *parent)
 	_pen_circle.setWidth(0);
 }
 
+GraphicsNodeSocket::GraphicsNodeSocketType GraphicsNodeSocket::
+socket_type() const {
+	return _socket_type;
+}
 
-QRectF GraphicsNodeSink::
+
+QRectF GraphicsNodeSocket::
 boundingRect() const
 {
 	QFont font;
@@ -44,7 +51,31 @@ boundingRect() const
 }
 
 
-void GraphicsNodeSink::
+void GraphicsNodeSocket::
+drawAlignedText(QPainter *painter, int flags)
+{
+	const qreal size = 32767.0;
+	QPointF corner(0, 0);
+	// sink
+	if (flags & Qt::AlignRight) {
+		corner.setX(_circle_radius + text_offset);
+		corner.setY(-size);
+		corner.ry() += size/2.0;
+	}
+	// source
+	else if (flags & Qt::AlignRight) {
+		corner.setX(-_circle_radius - text_offset);
+		corner.setY(-size);
+		corner.ry() += size/2.0;
+		corner.rx() -= size;
+	}
+	QRectF rect(corner, QSizeF(size, size));
+	painter->setPen(_pen_text);
+	painter->drawText(rect, flags, _text, 0);
+}
+
+
+void GraphicsNodeSocket::
 paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
 	// draw the bounding box for debugging purposes
@@ -52,21 +83,12 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget
 	// painter->drawRect(-circle_radius, -height/2, width, height);
 	// painter->drawRect(boundingRect());
 
-	// the sink anchor is at (0,0)
+	// the socket anchor is always at (0,0)
 	painter->setPen(_pen_circle);
 	painter->setBrush(_brush_circle);
 	painter->drawEllipse(-circle_radius, -circle_radius, circle_radius*2, circle_radius*2);
+	drawAlignedText(painter, (_socket_type == SINK) ? Qt::AlignLeft : Qt::AlignRight);
 
-	// draw the text of this sink
-	if (_text != "") {
-		const qreal size = 32767.0;
-		QPointF corner(circle_radius + text_offset, -size);
-		corner.ry() += size/2.0;
-		QRectF rect(corner, QSizeF(size, size));
-
-		painter->setPen(QPen(Qt::white));
-		painter->drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, _text, 0);
-	}
 
 	/*
 	const qreal size = 32767.0;
@@ -81,13 +103,13 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget
 	*/
 }
 
-void GraphicsNodeSink::
+void GraphicsNodeSocket::
 mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
 
 }
 
-void GraphicsNodeSink::
+void GraphicsNodeSocket::
 mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 	/*
@@ -100,7 +122,7 @@ mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 }
 
 
-void GraphicsNodeSink::
+void GraphicsNodeSocket::
 mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
 	// start a temporary edge here
@@ -130,7 +152,7 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 }
 
 
-void GraphicsNodeSink::
+void GraphicsNodeSocket::
 set_edge(GraphicsBezierEdge *edge) {
 	// TODO: handle edge conflict
 	_edge = edge;
@@ -138,9 +160,16 @@ set_edge(GraphicsBezierEdge *edge) {
 }
 
 
-void GraphicsNodeSink::
+void GraphicsNodeSocket::
 notifyPositionChange() {
 	if (!_edge) return;
 
-	_edge->set_stop(mapToScene(0,0));
+	switch (_socket_type) {
+	case SINK:
+		_edge->set_stop(mapToScene(0,0));
+		break;
+	case SOURCE:
+		_edge->set_start(mapToScene(0,0));
+		break;
+	}
 }
