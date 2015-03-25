@@ -49,6 +49,7 @@ private:
 	const QPen _pen_text;
 	const QBrush _brush_circle;
 	const QString _text;
+	const int _text_alignment;
 
 	GraphicsBezierEdge *_edge;
 	bool _edging = false;

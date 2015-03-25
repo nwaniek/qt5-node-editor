@@ -26,8 +26,9 @@ GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGra
 , _socket_type(socket_type)
 , _pen_circle(QColor("#FF000000"))
 , _pen_text(QColor("#FFFFFFFF"))
-, _brush_circle(QColor("#FF0077FF"))
+, _brush_circle((socket_type == SINK) ? QColor("#FF0077FF") : QColor("#FFFF7700"))
 , _text(text)
+, _text_alignment((socket_type == SINK) ? Qt::AlignLeft : Qt::AlignRight)
 , _edge(nullptr)
 {
 	_pen_circle.setWidth(0);
@@ -57,7 +58,7 @@ drawAlignedText(QPainter *painter, int flags)
 	const qreal size = 32767.0;
 	QPointF corner(0, 0);
 	// sink
-	if (flags & Qt::AlignRight) {
+	if (flags & Qt::AlignLeft) {
 		corner.setX(_circle_radius + text_offset);
 		corner.setY(-size);
 		corner.ry() += size/2.0;
@@ -71,7 +72,7 @@ drawAlignedText(QPainter *painter, int flags)
 	}
 	QRectF rect(corner, QSizeF(size, size));
 	painter->setPen(_pen_text);
-	painter->drawText(rect, flags, _text, 0);
+	painter->drawText(rect, flags | Qt::AlignVCenter, _text, 0);
 }
 
 
@@ -87,7 +88,7 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget
 	painter->setPen(_pen_circle);
 	painter->setBrush(_brush_circle);
 	painter->drawEllipse(-circle_radius, -circle_radius, circle_radius*2, circle_radius*2);
-	drawAlignedText(painter, (_socket_type == SINK) ? Qt::AlignLeft : Qt::AlignRight);
+	drawAlignedText(painter, _text_alignment);
 
 
 	/*
