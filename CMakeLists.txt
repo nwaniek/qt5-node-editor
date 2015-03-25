@@ -27,9 +27,6 @@ set(SRC
 	graphicsnode.cpp
 	graphicsnodeview.cpp
 	graphicsnodescene.cpp
-	graphicsnodesink.cpp
-	graphicsnodesource.cpp
-
 	graphicsnodesocket.cpp
 	)
 set(HEADERS
@@ -39,9 +36,6 @@ set(HEADERS
 	graphicsnode.hpp
 	graphicsnodeview.hpp
 	graphicsnodescene.hpp
-	graphicsnodesink.hpp
-	graphicsnodesource.hpp
-
 	graphicsnodesocket.hpp
 )
 
