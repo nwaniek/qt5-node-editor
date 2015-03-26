@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QPainterPath>
 
-// forward declarations
+class QResizeEvent;
 class GraphicsNodeView;
 class GraphicsNodeScene;
 
@@ -15,6 +15,9 @@ class MainWindow : public QMainWindow
 
 public:
 	MainWindow();
+
+protected:
+	virtual void resizeEvent(QResizeEvent *event);
 
 private:
 	void addNodeViews();

@@ -3,6 +3,7 @@
 #include <QScrollBar>
 #include <QResizeEvent>
 #include <QGraphicsDropShadowEffect>
+#include <QResizeEvent>
 #include <iostream>
 
 GraphicsNodeView::GraphicsNodeView(QWidget *parent)
@@ -28,13 +29,26 @@ GraphicsNodeView::GraphicsNodeView(QGraphicsScene *scene, QWidget *parent)
 
 	setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-	// setResizeAnchor(AnchorViewCenter);
+	setResizeAnchor(NoAnchor);
 	// setInteractive(true);
 	setTransformationAnchor(AnchorUnderMouse);
 	// setDragMode(QGraphicsView::RubberBandDrag);
-
-
 }
+
+
+void GraphicsNodeView::
+resizeEvent(QResizeEvent *event)
+{
+	// always have the origin in the top left corner
+	static bool first_resize = true;
+	if (first_resize) {
+		// TODO: scale awareness
+		centerOn(width()/2 - 50, height()/2 - 50);
+		first_resize = false;
+	}
+	QGraphicsView::resizeEvent(event);
+}
+
 
 
 void GraphicsNodeView::

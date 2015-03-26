@@ -7,11 +7,18 @@
 #include <iostream>
 #include "graphicsbezieredge.hpp"
 
-static const qreal pen_width = 1.0;
-static const qreal width = 30.0;
-static const qreal height = 20.0;
-static const qreal circle_radius = 6.0;
-static const qreal text_offset = 3.0;
+// TODO:
+// * prepareGeometryChange
+
+#define PEN_COLOR_CIRCLE      QColor("#FF000000")
+#define PEN_COLOR_TEXT        QColor("#FFFFFFFF")
+#define BRUSH_COLOR_SINK      QColor("#FF0077FF")
+#define BRUSH_COLOR_SOURCE    QColor("#FFFF7700")
+#define TEXT_ALIGNMENT_SINK   Qt::AlignLeft
+#define TEXT_ALIGNMENT_SOURCE Qt::AlignRight
+
+const qreal height = 20.0;
+const qreal width = 30.0;
 
 
 GraphicsNodeSocket::
@@ -24,15 +31,16 @@ GraphicsNodeSocket::
 GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent)
 : QGraphicsItem(parent)
 , _socket_type(socket_type)
-, _pen_circle(QColor("#FF000000"))
-, _pen_text(QColor("#FFFFFFFF"))
-, _brush_circle((socket_type == SINK) ? QColor("#FF0077FF") : QColor("#FFFF7700"))
+, _pen_circle(PEN_COLOR_CIRCLE)
+, _pen_text(PEN_COLOR_TEXT)
+, _brush_circle((socket_type == SINK) ? BRUSH_COLOR_SINK : BRUSH_COLOR_SOURCE)
 , _text(text)
-, _text_alignment((socket_type == SINK) ? Qt::AlignLeft : Qt::AlignRight)
+, _text_alignment((socket_type == SINK) ? TEXT_ALIGNMENT_SINK : TEXT_ALIGNMENT_SOURCE)
 , _edge(nullptr)
 {
 	_pen_circle.setWidth(0);
 }
+
 
 GraphicsNodeSocket::GraphicsNodeSocketType GraphicsNodeSocket::
 socket_type() const {
@@ -48,7 +56,7 @@ boundingRect() const
 	int text_width = fm.width(_text);
 	int text_height = fm.height();
 
-	return QRectF(-pen_width - circle_radius, -pen_width - height/2, circle_radius*2 + text_offset + text_width, height);
+	return QRectF(-_pen_width - _circle_radius, -_pen_width - height/2, _circle_radius*2 + _text_offset + text_width, height);
 }
 
 
@@ -59,13 +67,13 @@ drawAlignedText(QPainter *painter, int flags)
 	QPointF corner(0, 0);
 	// sink
 	if (flags & Qt::AlignLeft) {
-		corner.setX(_circle_radius + text_offset);
+		corner.setX(_circle_radius + _text_offset);
 		corner.setY(-size);
 		corner.ry() += size/2.0;
 	}
 	// source
 	else if (flags & Qt::AlignRight) {
-		corner.setX(-_circle_radius - text_offset);
+		corner.setX(-_circle_radius - _text_offset);
 		corner.setY(-size);
 		corner.ry() += size/2.0;
 		corner.rx() -= size;
@@ -79,15 +87,10 @@ drawAlignedText(QPainter *painter, int flags)
 void GraphicsNodeSocket::
 paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
-	// draw the bounding box for debugging purposes
-	// painter->setPen(_pen_circle);
-	// painter->drawRect(-circle_radius, -height/2, width, height);
-	// painter->drawRect(boundingRect());
-
 	// the socket anchor is always at (0,0)
 	painter->setPen(_pen_circle);
 	painter->setBrush(_brush_circle);
-	painter->drawEllipse(-circle_radius, -circle_radius, circle_radius*2, circle_radius*2);
+	painter->drawEllipse(-_circle_radius, -_circle_radius, _circle_radius*2, _circle_radius*2);
 	drawAlignedText(painter, _text_alignment);
 
 
@@ -129,10 +132,10 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 	// start a temporary edge here
 	if (event->button() == Qt::LeftButton) {
 
-		if (event->pos().x() >= -circle_radius
-		&&  event->pos().x() <=  circle_radius
-		&&  event->pos().y() >= -circle_radius
-		&&  event->pos().y() <=  circle_radius)
+		if (event->pos().x() >= -_circle_radius
+		&&  event->pos().x() <=  _circle_radius
+		&&  event->pos().y() >= -_circle_radius
+		&&  event->pos().y() <=  _circle_radius)
 		{
 			// if there is an edge going in here already, take it and drag
 			// it somewhere else

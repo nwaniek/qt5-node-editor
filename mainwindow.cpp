@@ -12,6 +12,9 @@
 #include <QPushButton>
 #include <QTextEdit>
 #include <QStatusBar>
+#include <QResizeEvent>
+
+#include <iostream>
 
 #include "graphicsnodescene.hpp"
 #include "graphicsnodeview.hpp"
@@ -24,22 +27,29 @@ MainWindow::MainWindow()
 : _view(nullptr)
 , _scene(nullptr)
 {
-	// view setup
-	_view = new GraphicsNodeView(this);
-	this->setCentralWidget(_view);
 
 	// create and configure scene
 	_scene = new GraphicsNodeScene(this);
 	_scene->setSceneRect(-32000, -32000, 64000, 64000);
 
-	//  finally set the scene and center it
+	//  view setup
+	_view = new GraphicsNodeView(this);
 	_view->setScene(_scene);
-	_view->centerOn(0, 0);
+	this->setCentralWidget(_view);
+
 
 	// add some content
 	//addFakeContent()
 	addNodeViews();
 }
+
+void MainWindow::
+resizeEvent(QResizeEvent *event)
+{
+	QMainWindow::resizeEvent(event);
+}
+
+
 
 void MainWindow::
 addFakeContent()
@@ -132,3 +142,4 @@ addNodeViews()
 	e = new GraphicsBezierEdge(n3, 1, n2, 0);
 	_scene->addItem(e);
 }
+
