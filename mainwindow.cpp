@@ -89,7 +89,7 @@ addNodeViews()
 	GraphicsNode *n1, *n2, *n3, *n4;
 
 	n1 = new GraphicsNode();
-	n1->setPos(20, 40);
+	n1->setPos(200, 400);
 	n1->add_sink("sink 1.1");
 	n1->add_sink("sink 1.2");
 	n1->add_source("source 1.1");
@@ -98,7 +98,7 @@ addNodeViews()
 
 
 	n2 = new GraphicsNode();
-	n2->setPos(350, 250);
+	n2->setPos(550, 450);
 	n2->add_sink("sink 2.1");
 	n2->add_sink("sink 2.2");
 	n2->add_sink("sink 2.3");
@@ -106,21 +106,23 @@ addNodeViews()
 
 
 	n3 = new GraphicsNode();
-	n3->setPos(350, 40);
+	n3->setPos(550, 240);
 	n3->add_sink("sink 3.1");
 	n3->add_source("source 3.1");
 	n3->add_source("source 3.2");
 
 	n4 = new GraphicsNode();
-	n4->setPos(550, 140);
+	n4->setPos(750, 340);
 	n4->add_sink("sink 4.1");
 	n4->add_sink("sink 4.2");
+	n4->add_source("source 4.1");
 
 	_scene->addItem(n1);
 	_scene->addItem(n2);
 	_scene->addItem(n3);
 	_scene->addItem(n4);
 
+	/*
 	GraphicsBezierEdge *e;
 
 	// build up all edges
@@ -141,5 +143,6 @@ addNodeViews()
 
 	e = new GraphicsBezierEdge(n3, 1, n2, 0);
 	_scene->addItem(e);
+	*/
 }
 

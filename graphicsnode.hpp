@@ -11,6 +11,7 @@
 #include <QGraphicsObject>
 #include <QVariant>
 #include <QString>
+#include "graphicsnodedefs.hpp"
 
 
 class QPushButton;
@@ -43,6 +44,9 @@ public:
 	void connect_source(int i, GraphicsBezierEdge *edge);
 	void connect_sink(int i, GraphicsBezierEdge *edge);
 
+	int type() const {
+		return GraphicsNodeItemTypes::TypeNode;
+	};
 
 protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);

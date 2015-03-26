@@ -1,10 +1,17 @@
 #include "graphicsnodesocket.hpp"
 #include <QPainter>
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsSceneDragDropEvent>
 #include <QGraphicsScene>
 #include <QFont>
 #include <QFontMetrics>
+#include <QList>
+#include <QDrag>
+#include <QMimeData>
+
 #include <iostream>
+#include <algorithm>
+
 #include "graphicsbezieredge.hpp"
 
 // TODO:
@@ -17,8 +24,8 @@
 #define TEXT_ALIGNMENT_SINK   Qt::AlignLeft
 #define TEXT_ALIGNMENT_SOURCE Qt::AlignRight
 
-const qreal height = 20.0;
-const qreal width = 30.0;
+// const qreal height = 20.0;
+// const qreal width = 30.0;
 
 
 GraphicsNodeSocket::
@@ -35,10 +42,10 @@ GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGra
 , _pen_text(PEN_COLOR_TEXT)
 , _brush_circle((socket_type == SINK) ? BRUSH_COLOR_SINK : BRUSH_COLOR_SOURCE)
 , _text(text)
-, _text_alignment((socket_type == SINK) ? TEXT_ALIGNMENT_SINK : TEXT_ALIGNMENT_SOURCE)
 , _edge(nullptr)
 {
 	_pen_circle.setWidth(0);
+	setAcceptDrops(true);
 }
 
 
@@ -54,105 +61,103 @@ boundingRect() const
 	QFont font;
 	QFontMetrics fm(font);
 	int text_width = fm.width(_text);
-	int text_height = fm.height();
+	const qreal text_height = static_cast<qreal>(fm.height());
 
-	return QRectF(-_pen_width - _circle_radius, -_pen_width - height/2, _circle_radius*2 + _text_offset + text_width, height);
+	const qreal x = -_circle_radius - _pen_width/2;
+	const qreal y = -text_height/2.0 - _pen_width/2;
+
+	const qreal w = std::max(_min_width, _circle_radius*2 + _text_offset + text_width + _pen_width);
+	const qreal h = std::max(_min_height, text_height + _pen_width);
+
+	if (_socket_type == SINK)
+		return QRectF(x, y, w, h);
+	else
+		return QRectF(-w-x, y, w, h);
 }
 
 
 void GraphicsNodeSocket::
-drawAlignedText(QPainter *painter, int flags)
+drawAlignedText(QPainter *painter)
 {
+	int flags = Qt::AlignVCenter;
 	const qreal size = 32767.0;
 	QPointF corner(0, 0);
-	// sink
-	if (flags & Qt::AlignLeft) {
+	if (_socket_type == SINK) {
 		corner.setX(_circle_radius + _text_offset);
 		corner.setY(-size);
 		corner.ry() += size/2.0;
+		flags |= Qt::AlignLeft;
 	}
-	// source
-	else if (flags & Qt::AlignRight) {
+	else {
 		corner.setX(-_circle_radius - _text_offset);
 		corner.setY(-size);
 		corner.ry() += size/2.0;
 		corner.rx() -= size;
+		flags |= Qt::AlignRight;
 	}
 	QRectF rect(corner, QSizeF(size, size));
 	painter->setPen(_pen_text);
-	painter->drawText(rect, flags | Qt::AlignVCenter, _text, 0);
+	painter->drawText(rect, flags, _text, 0);
+}
+
+
+QPointF GraphicsNodeSocket::
+sceneAnchorPos() const {
+	return mapToScene(0,0);
 }
 
 
 void GraphicsNodeSocket::
-paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+paint(QPainter *painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/)
 {
-	// the socket anchor is always at (0,0)
 	painter->setPen(_pen_circle);
 	painter->setBrush(_brush_circle);
 	painter->drawEllipse(-_circle_radius, -_circle_radius, _circle_radius*2, _circle_radius*2);
-	drawAlignedText(painter, _text_alignment);
+	drawAlignedText(painter);
 
+	// debug painting the bounding box
+#if 0
+	QPen debugPen = QPen(QColor(Qt::red));
+	debugPen.setWidth(0);
+	auto r = boundingRect();
+	painter->setPen(debugPen);
+	painter->setBrush(Qt::NoBrush);
+	painter->drawRect(r);
 
-	/*
-	const qreal size = 32767.0;
-	QPointF corner(point.x(), point.y() - size);
-	if (flags & Qt::AlignHCenter) corner.rx() -= size/2.0;
-	else if (flags & Qt::AlignRight) corner.rx() -= size;
-	if (flags & Qt::AlignVCenter) corner.ry() += size/2.0;
-	else if (flags & Qt::AlignTop) corner.ry() += size;
-	else flags |= Qt::AlignBottom;
-	QRectF rect(corner, QSizeF(size, size));
-	painter.drawText(rect, flags, text, boundingRect);
-	*/
+	painter->drawPoint(0,0);
+	painter->drawLine(0,0, r.width(), 0);
+#endif
 }
+
 
 void GraphicsNodeSocket::
 mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-
+	QGraphicsItem::mouseMoveEvent(event);
 }
+
 
 void GraphicsNodeSocket::
 mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
-	/*
-	if (_edge) {
-		scene()->removeItem(_edge);
-		delete _edge;
-		_edge = nullptr;
-	}
-	*/
+	QGraphicsItem::mouseReleaseEvent(event);
+}
+
+
+bool GraphicsNodeSocket::
+isInSocketCircle(const QPointF &p) const
+{
+	return p.x() >= -_circle_radius
+		&& p.x() <=  _circle_radius
+		&& p.y() >= -_circle_radius
+		&& p.y() <=  _circle_radius;
 }
 
 
 void GraphicsNodeSocket::
 mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-	// start a temporary edge here
-	if (event->button() == Qt::LeftButton) {
-
-		if (event->pos().x() >= -_circle_radius
-		&&  event->pos().x() <=  _circle_radius
-		&&  event->pos().y() >= -_circle_radius
-		&&  event->pos().y() <=  _circle_radius)
-		{
-			// if there is an edge going in here already, take it and drag
-			// it somewhere else
-
-			// if there is no edge here, create a new one
-			/*
-			if (!_edge) {
-				_edge = new GraphicsBezierEdge(mapToScene(event->pos()), mapToScene(0, 0));
-				scene()->addItem(_edge);
-			}
-			*/
-
-		}
-		else {
-			QGraphicsItem::mousePressEvent(event);
-		}
-	}
+	QGraphicsItem::mousePressEvent(event);
 }
 
 
@@ -177,3 +182,4 @@ notifyPositionChange() {
 		break;
 	}
 }
+

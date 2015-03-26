@@ -56,6 +56,7 @@ GraphicsNode::GraphicsNode(QGraphicsItem *parent)
 	*/
 }
 
+
 GraphicsNode::
 ~GraphicsNode()
 {
@@ -147,9 +148,6 @@ itemChange(GraphicsItemChange change, const QVariant &value)
 }
 
 
-
-
-
 const GraphicsNodeSocket* GraphicsNode::
 add_sink()
 {
@@ -157,6 +155,7 @@ add_sink()
 	_sinks.push_back(s);
 	return s;
 }
+
 
 const GraphicsNodeSocket* GraphicsNode::
 add_sink(const QString &text)
@@ -166,6 +165,7 @@ add_sink(const QString &text)
 	s->setPos(0, 30 + 20 * (_sinks.size() - 1));
 	return s;
 }
+
 
 const GraphicsNodeSocket* GraphicsNode::
 add_source(const QString &text)

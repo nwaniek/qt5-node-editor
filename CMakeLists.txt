@@ -37,6 +37,7 @@ set(HEADERS
 	graphicsnodeview.hpp
 	graphicsnodescene.hpp
 	graphicsnodesocket.hpp
+	graphicsnodedefs.hpp
 )
 
 # include(${QT_USE_FILE})

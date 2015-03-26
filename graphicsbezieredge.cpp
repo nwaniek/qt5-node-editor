@@ -67,7 +67,7 @@ GraphicsBezierEdge::
 
 
 void GraphicsBezierEdge::
-paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget) {
+paint(QPainter * painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/) {
 	painter->setPen(_pen);
 	painter->drawPath(path());
 }
@@ -75,7 +75,7 @@ paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * wid
 
 void GraphicsBezierEdge::
 mousePressEvent(QGraphicsSceneMouseEvent *event) {
-
+	QGraphicsPathItem::mousePressEvent(event);
 }
 
 

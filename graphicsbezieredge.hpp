@@ -5,6 +5,7 @@
 #include <QPoint>
 #include <QPointF>
 #include <QGraphicsPathItem>
+#include "graphicsnodedefs.hpp"
 
 class QGraphicsDropShadowEffect;
 class QGraphicsSceneMouseEvent;
@@ -38,6 +39,10 @@ public:
 	void set_stop(QPointF p);
 
 	virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
+
+	int type() const {
+		return GraphicsNodeItemTypes::TypeBezierEdge;
+	}
 
 protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);

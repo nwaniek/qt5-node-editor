@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 
+// TODO: move to graphicsnodeview. use graphicsnodescene for management
 
 GraphicsNodeScene::GraphicsNodeScene(QObject *parent)
 : QGraphicsScene(parent)

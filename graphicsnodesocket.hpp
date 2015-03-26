@@ -6,11 +6,12 @@
 #include <QGraphicsItem>
 #include <QPen>
 #include <QBrush>
+#include <QPointF>
+#include "graphicsnodedefs.hpp"
 
 class QGraphicsSceneMouseEvent;
+class QGraphicsSceneDragDropEvent;
 class GraphicsBezierEdge;
-
-
 
 
 class GraphicsNodeSocket : public QGraphicsItem
@@ -21,6 +22,7 @@ public:
 		SINK,
 		SOURCE
 	};
+
 
 	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, QGraphicsItem *parent = nullptr);
 	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent = nullptr);
@@ -35,13 +37,25 @@ public:
 
 	GraphicsNodeSocketType socket_type() const;
 
+	int type() const {
+		return GraphicsNodeItemTypes::TypeSocket;
+	};
+
+	bool isInSocketCircle(const QPointF &p) const;
+
+	// return the anchor position relative to the scene in which the socket
+	// is living in
+	QPointF sceneAnchorPos() const;
+
 protected:
+	// event handling
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 	virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 	virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
 
 private:
-	void drawAlignedText(QPainter *painter, int alignment);
+	void drawAlignedText(QPainter *painter);
+
 
 private:
 	const GraphicsNodeSocketType _socket_type;
@@ -49,16 +63,17 @@ private:
 	const QPen _pen_text;
 	const QBrush _brush_circle;
 	const QString _text;
-	const int _text_alignment;
 
 	GraphicsBezierEdge *_edge;
-	bool _edging = false;
 
-private:// some constants
+
+private:// some constants. TODO: need to be defined somewhere else (customizable?)
 	const qreal _pen_width = 1.0;
 	const qreal _circle_radius = 6.0;
 	const qreal _text_offset = 3.0;
 
+	const qreal _min_width = 30;
+	const qreal _min_height = 12.0;
 };
 
 #endif /* __GRAPHICSNODESOCKET_HPP__99275D3E_35A8_4D63_8E10_995E5DC83C8C */

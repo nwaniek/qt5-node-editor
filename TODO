@@ -1,2 +1,0 @@
-* change all occurences of QPoint to QPointF: QGraphicsScene works on a real
-  based coordinate system
