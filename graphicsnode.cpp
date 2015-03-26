@@ -12,12 +12,15 @@
 #include <QTextDocument>
 #include <QGraphicsDropShadowEffect>
 
+#include <algorithm>
+
 #include "graphicsbezieredge.hpp"
 #include "graphicsnodesocket.hpp"
 
 
 GraphicsNode::GraphicsNode(QGraphicsItem *parent)
 : QGraphicsItem(parent)
+, _changed(false)
 , _width(150)
 , _height(120)
 , _pen_default(QColor("#7F000000"))
@@ -67,16 +70,11 @@ GraphicsNode::
 QRectF GraphicsNode::
 boundingRect() const
 {
-	// TODO : compute width/height from contained elements
-	const qreal pen_width = 1.0;
 
-	// size of sockets
-	const qreal socket_size = 6.0;
-
-	return QRectF(-pen_width - socket_size,
-			-pen_width,
-			_width + pen_width + socket_size,
-			_height + pen_width).normalized();
+	return QRectF(-_pen_width - _socket_size,
+			-_pen_width,
+			_width + _pen_width + _socket_size,
+			_height + _pen_width).normalized();
 }
 
 
@@ -151,9 +149,7 @@ itemChange(GraphicsItemChange change, const QVariant &value)
 const GraphicsNodeSocket* GraphicsNode::
 add_sink()
 {
-	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SINK, this);
-	_sinks.push_back(s);
-	return s;
+	return add_sink("");
 }
 
 
@@ -162,8 +158,18 @@ add_sink(const QString &text)
 {
 	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SINK, text, this);
 	_sinks.push_back(s);
-	s->setPos(0, 30 + 20 * (_sinks.size() - 1));
+	_changed = true;
+	prepareGeometryChange();
+	updateGeometry();
+	repositionSockets();
 	return s;
+}
+
+
+const GraphicsNodeSocket* GraphicsNode::
+add_source()
+{
+	return add_source("");
 }
 
 
@@ -172,7 +178,10 @@ add_source(const QString &text)
 {
 	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SOURCE, text, this);
 	_sources.push_back(s);
-	s->setPos(150, 30 + 20 * (_sinks.size() + _sources.size() - 1));
+	_changed = true;
+	prepareGeometryChange();
+	updateGeometry();
+	repositionSockets();
 	return s;
 }
 
@@ -188,4 +197,65 @@ void GraphicsNode::
 connect_sink(int i, GraphicsBezierEdge *edge)
 {
 	_sinks[i]->set_edge(edge);
+}
+
+
+void GraphicsNode::
+repositionSockets()
+{
+	int ypos;
+
+	// compute position of sockets. sinks are placed left/top
+	ypos = _top_margin;
+	for (size_t i = 0; i < _sinks.size(); i++) {
+		auto s = _sinks[i];
+		auto rect = s->boundingRect();
+
+		s->setPos(0, ypos);
+		ypos += rect.height() + _item_padding;
+	}
+
+	// sources are placed bottom/right
+	ypos = _height - _bottom_margin;
+	for (size_t i = _sources.size(); i > 0; i--) {
+		auto s = _sources[i-1];
+		auto rect = s->boundingRect();
+
+		// TODO: bottom-margin
+		ypos -= rect.height();
+		s->setPos(_width, ypos);
+		ypos -= _item_padding;
+	}
+}
+
+
+void GraphicsNode::
+updateGeometry()
+{
+	if (!_changed) return;
+
+	qreal height = _top_margin;
+
+	for (size_t i = 0; i < _sinks.size(); i++) {
+		auto s = _sinks[i];
+		auto rect = s->boundingRect();
+		height += rect.height() + _item_padding;
+	}
+
+	// TODO contained element size
+
+	for (size_t i = _sources.size(); i > 0; i--) {
+		auto s = _sources[i-1];
+		auto rect = s->boundingRect();
+		height += rect.height() + _item_padding;
+	}
+
+	height += _bottom_margin;
+	_height = std::max(height, _min_height);
+
+
+
+	// TODO width computation
+
+	_changed = false;
 }

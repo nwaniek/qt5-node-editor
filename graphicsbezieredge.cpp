@@ -12,7 +12,7 @@
 
 
 GraphicsBezierEdge::
-GraphicsBezierEdge(QPoint start, QPoint stop, float factor)
+GraphicsBezierEdge(QPoint start, QPoint stop, qreal factor)
 : _pen(QColor("#00FF00"))
 , _effect(new QGraphicsDropShadowEffect())
 , _start(start)
@@ -30,29 +30,29 @@ GraphicsBezierEdge(QPoint start, QPoint stop, float factor)
 
 
 GraphicsBezierEdge::
-GraphicsBezierEdge(QPointF start, QPointF stop, float factor)
+GraphicsBezierEdge(QPointF start, QPointF stop, qreal factor)
 : GraphicsBezierEdge(start.toPoint(), stop.toPoint(), factor) {}
 
 
 GraphicsBezierEdge::
-GraphicsBezierEdge(int x0, int y0, int x1, int y1, float factor)
+GraphicsBezierEdge(int x0, int y0, int x1, int y1, qreal factor)
 : GraphicsBezierEdge(QPoint(x0, y0), QPoint(x1, y1), factor) {}
 
 
 GraphicsBezierEdge::
-GraphicsBezierEdge(float factor)
+GraphicsBezierEdge(qreal factor)
 : GraphicsBezierEdge(0, 0, 0, 0, factor) {}
 
 
 GraphicsBezierEdge::
-GraphicsBezierEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, float factor)
+GraphicsBezierEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, qreal factor)
 : GraphicsBezierEdge(0, 0, 0, 0, factor)
 {
 	connect(n1, sourceid, n2, sinkid);
 }
 
 GraphicsBezierEdge::
-GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, float factor)
+GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
 : GraphicsBezierEdge(0, 0, 0, 0, factor)
 {
 	connect(source, sink);
@@ -85,14 +85,16 @@ update_path() const {
 	QPainterPath path(_start);
 
 	// compute anchor point offsets
-	const float min_dist = 100.f;
-	int dist = 0;
+	const qreal min_dist = 100.f;
+	// const qreal max_dist = 250.f;
+	qreal dist = 0;
 	if (_start.x() <= _stop.x()) {
 		dist = std::max(min_dist, (_stop.x() - _start.x()) * _factor);
 	} else {
 		dist = std::max(min_dist, (_start.x() - _stop.x()) * _factor);
 	}
 
+	// dist = std::min(dist, max_dist);
 	c1.setX(_start.x() + dist);
 	c1.setY(_start.y());
 

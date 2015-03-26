@@ -38,6 +38,7 @@ public:
 	const GraphicsNodeSocket* add_sink();
 	const GraphicsNodeSocket* add_sink(const QString &text);
 
+	const GraphicsNodeSocket* add_source();
 	const GraphicsNodeSocket* add_source(const QString &text);
 
 	// connecting sources and sinks
@@ -53,6 +54,23 @@ protected:
 	virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 private:
+	void repositionSockets();
+	void updateGeometry();
+
+private:
+	const qreal _min_width = 150.0;
+	const qreal _min_height = 120.0;
+
+	const qreal _top_margin = 35.0;
+	const qreal _bottom_margin = 5.0;
+	const qreal _item_padding = 5.0;
+
+	const qreal _pen_width = 1.0;
+	const qreal _socket_size = 6.0;
+
+
+	bool _changed;
+
 	qreal _width;
 	qreal _height;
 

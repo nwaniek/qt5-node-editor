@@ -86,63 +86,14 @@ addFakeContent()
 void MainWindow::
 addNodeViews()
 {
-	GraphicsNode *n1, *n2, *n3, *n4;
-
-	n1 = new GraphicsNode();
-	n1->setPos(200, 400);
-	n1->add_sink("sink 1.1");
-	n1->add_sink("sink 1.2");
-	n1->add_source("source 1.1");
-	n1->add_source("source 1.2");
-	n1->add_source("source 1.3");
-
-
-	n2 = new GraphicsNode();
-	n2->setPos(550, 450);
-	n2->add_sink("sink 2.1");
-	n2->add_sink("sink 2.2");
-	n2->add_sink("sink 2.3");
-	n2->add_source("source 2.1");
-
-
-	n3 = new GraphicsNode();
-	n3->setPos(550, 240);
-	n3->add_sink("sink 3.1");
-	n3->add_source("source 3.1");
-	n3->add_source("source 3.2");
-
-	n4 = new GraphicsNode();
-	n4->setPos(750, 340);
-	n4->add_sink("sink 4.1");
-	n4->add_sink("sink 4.2");
-	n4->add_source("source 4.1");
-
-	_scene->addItem(n1);
-	_scene->addItem(n2);
-	_scene->addItem(n3);
-	_scene->addItem(n4);
-
-	/*
-	GraphicsBezierEdge *e;
-
-	// build up all edges
-	e = new GraphicsBezierEdge(n1, 0, n3, 0);
-	_scene->addItem(e);
-
-	e = new GraphicsBezierEdge(n1, 1, n2, 1);
-	_scene->addItem(e);
-
-	e = new GraphicsBezierEdge(n1, 2, n2, 2);
-	_scene->addItem(e);
-
-	e = new GraphicsBezierEdge(n2, 0, n4, 1);
-	_scene->addItem(e);
-
-	e = new GraphicsBezierEdge(n3, 0, n4, 0);
-	_scene->addItem(e);
-
-	e = new GraphicsBezierEdge(n3, 1, n2, 0);
-	_scene->addItem(e);
-	*/
+	for (int i = 0; i < 5; i++) {
+		auto n = new GraphicsNode();
+		for (int j = 0; j < 5; j++) {
+			n->setPos(i * 25, i * 25);
+			n->add_sink("sink");
+			n->add_source("source");
+		}
+		_scene->addItem(n);
+	}
 }
 

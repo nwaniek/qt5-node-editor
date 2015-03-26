@@ -16,13 +16,13 @@ class GraphicsNodeSocket;
 class GraphicsBezierEdge : public QGraphicsPathItem
 {
 public:
-	// GraphicsBezierEdge(float factor=0.5f);
-	explicit GraphicsBezierEdge(float factor=0.5f);
-	GraphicsBezierEdge(int x0, int y0, int x1, int y1, float factor=0.5f);
-	GraphicsBezierEdge(QPoint start, QPoint stop, float factor=0.5f);
-	GraphicsBezierEdge(QPointF start, QPointF stop, float factor=0.5f);
-	GraphicsBezierEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, float factor=0.5f);
-	GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, float factor=0.5f);
+	// GraphicsBezierEdge(qreal factor=0.5f);
+	explicit GraphicsBezierEdge(qreal factor=0.5f);
+	GraphicsBezierEdge(int x0, int y0, int x1, int y1, qreal factor=0.5f);
+	GraphicsBezierEdge(QPoint start, QPoint stop, qreal factor=0.5f);
+	GraphicsBezierEdge(QPointF start, QPointF stop, qreal factor=0.5f);
+	GraphicsBezierEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, qreal factor=0.5f);
+	GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
 
 	~GraphicsBezierEdge();
 
@@ -54,7 +54,7 @@ private:
 	QGraphicsDropShadowEffect *_effect;
 	QPoint _start;
 	QPoint _stop;
-	float _factor;
+	qreal _factor;
 };
 
 
