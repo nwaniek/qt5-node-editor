@@ -88,7 +88,7 @@ addNodeViews()
 {
 	for (int i = 0; i < 5; i++) {
 		auto n = new GraphicsNode();
-		for (int j = 0; j < 5; j++) {
+		for (int j = i; j < 5; j++) {
 			n->setPos(i * 25, i * 25);
 			n->add_sink("sink");
 			n->add_source("source");

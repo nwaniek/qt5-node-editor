@@ -85,7 +85,7 @@ update_path() const {
 	QPainterPath path(_start);
 
 	// compute anchor point offsets
-	const qreal min_dist = 100.f;
+	const qreal min_dist = 0.f;
 	// const qreal max_dist = 250.f;
 	qreal dist = 0;
 	if (_start.x() <= _stop.x()) {
