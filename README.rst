@@ -11,4 +11,4 @@ not be limited to):
 
 Example:
 
-.. figure:: example_editor.png
+.. figure:: doc/example_editor01.png
