@@ -59,11 +59,9 @@ protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
 protected:
+	virtual QPainterPath update_path() const = 0;
 
-	QPainterPath update_path() const;
 	QPen _pen;
-
-private:
 	QGraphicsDropShadowEffect *_effect;
 	QPoint _start;
 	QPoint _stop;
@@ -80,6 +78,9 @@ class GraphicsBezierEdge : public GraphicsDirectedEdge
 	int type() const override {
 		return GraphicsNodeItemTypes::TypeBezierEdge;
 	}
+
+protected:
+	virtual QPainterPath update_path() const override;
 };
 
 

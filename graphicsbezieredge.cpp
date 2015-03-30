@@ -20,7 +20,6 @@ GraphicsDirectedEdge(QPoint start, QPoint stop, qreal factor)
 , _factor(factor)
 {
 	_pen.setWidth(2);
-	setPath(update_path());
 	setZValue(-1);
 
 	_effect->setBlurRadius(15.0);
@@ -75,31 +74,7 @@ mousePressEvent(QGraphicsSceneMouseEvent *event) {
 }
 
 
-QPainterPath GraphicsDirectedEdge::
-update_path() const {
-	QPoint c1, c2;
-	QPainterPath path(_start);
 
-	// compute anchor point offsets
-	const qreal min_dist = 0.f;
-	// const qreal max_dist = 250.f;
-	qreal dist = 0;
-	if (_start.x() <= _stop.x()) {
-		dist = std::max(min_dist, (_stop.x() - _start.x()) * _factor);
-	} else {
-		dist = std::max(min_dist, (_start.x() - _stop.x()) * _factor);
-	}
-
-	// dist = std::min(dist, max_dist);
-	c1.setX(_start.x() + dist);
-	c1.setY(_start.y());
-
-	c2.setX(_stop.x() - dist);
-	c2.setY(_stop.y());
-
-	path.cubicTo(c1, c2, _stop);
-	return path;
-}
 
 
 void GraphicsDirectedEdge::
@@ -197,6 +172,31 @@ connect_source(GraphicsNodeSocket *source)
 }
 
 
+QPainterPath GraphicsBezierEdge::
+update_path() const {
+	QPoint c1, c2;
+	QPainterPath path(_start);
+
+	// compute anchor point offsets
+	const qreal min_dist = 0.f;
+	// const qreal max_dist = 250.f;
+	qreal dist = 0;
+	if (_start.x() <= _stop.x()) {
+		dist = std::max(min_dist, (_stop.x() - _start.x()) * _factor);
+	} else {
+		dist = std::max(min_dist, (_start.x() - _stop.x()) * _factor);
+	}
+
+	// dist = std::min(dist, max_dist);
+	c1.setX(_start.x() + dist);
+	c1.setY(_start.y());
+
+	c2.setX(_stop.x() - dist);
+	c2.setY(_stop.y());
+
+	path.cubicTo(c1, c2, _stop);
+	return path;
+}
 
 void GraphicsBezierEdge::
 paint(QPainter * painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/) {
