@@ -1,3 +1,5 @@
+/* See LICENSE file for copyright and license details. */
+
 #include "graphicsnodeview.hpp"
 #include <QWheelEvent>
 #include <QScrollBar>

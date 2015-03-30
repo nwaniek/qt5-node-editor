@@ -1,3 +1,5 @@
+/* See LICENSE file for copyright and license details. */
+
 #ifndef __MAINWINDOW_HPP__0E042426_E73E_4382_BC86_DE7F000B57CC
 #define __MAINWINDOW_HPP__0E042426_E73E_4382_BC86_DE7F000B57CC
 

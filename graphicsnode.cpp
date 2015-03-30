@@ -1,3 +1,5 @@
+/* See LICENSE file for copyright and license details. */
+
 #include "graphicsnode.hpp"
 #include <QPushButton>
 #include <QPen>

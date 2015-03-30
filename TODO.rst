@@ -16,3 +16,4 @@ DONE
 * node titles
 * resizable nodes
 * draggable edges
+* other widgets embeddable on each node (setCentralWidget)

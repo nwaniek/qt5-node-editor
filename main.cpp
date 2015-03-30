@@ -1,3 +1,5 @@
+/* See LICENSE file for copyright and license details. */
+
 #include <QApplication>
 #include <QStyleFactory>
 #include "mainwindow.hpp"
