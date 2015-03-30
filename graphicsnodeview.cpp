@@ -74,9 +74,6 @@ wheelEvent(QWheelEvent *event) {
 }
 
 
-
-
-
 void GraphicsNodeView::
 mousePressEvent(QMouseEvent *event)
 {
@@ -287,13 +284,11 @@ middleMouseButtonPress(QMouseEvent *event)
 bool GraphicsNodeView::
 can_accept_edge(GraphicsNodeSocket *sock)
 {
-	if (!sock) return false;
-	if (!_drag_event) return false;
-
-	if ((sock->is_sink() && _drag_event->mode == EdgeDragEvent::move_to_sink)
-	||  (sock->is_sink() && _drag_event->mode == EdgeDragEvent::connect_to_sink)
-	||  (sock->is_source() && _drag_event->mode == EdgeDragEvent::connect_to_source)
-	||  (sock->is_source() && _drag_event->mode == EdgeDragEvent::move_to_source))
+	if (sock && _drag_event
+	&&((sock->is_sink() && _drag_event->mode == EdgeDragEvent::move_to_sink)
+	|| (sock->is_sink() && _drag_event->mode == EdgeDragEvent::connect_to_sink)
+	|| (sock->is_source() && _drag_event->mode == EdgeDragEvent::connect_to_source)
+	|| (sock->is_source() && _drag_event->mode == EdgeDragEvent::move_to_source)))
 		return true;
 
 	return false;

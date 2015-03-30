@@ -11,6 +11,7 @@
 #include <QGraphicsTextItem>
 #include <QTextDocument>
 #include <QGraphicsDropShadowEffect>
+#include <QGraphicsProxyWidget>
 
 #include <algorithm>
 
@@ -63,6 +64,7 @@ GraphicsNode::GraphicsNode(QGraphicsItem *parent)
 GraphicsNode::
 ~GraphicsNode()
 {
+	if (_central_proxy) delete _central_proxy;
 	delete _effect;
 }
 
@@ -185,6 +187,7 @@ connect_sink(int i, GraphicsDirectedEdge *edge)
 	_sinks[i]->set_edge(edge);
 }
 
+// TODO: merge repositionSockets and updateGeometry
 
 void GraphicsNode::
 repositionSockets()
@@ -200,6 +203,19 @@ repositionSockets()
 		s->setPos(0, ypos);
 		ypos += rect.height() + _item_padding;
 	}
+
+	/*
+	if (_central_proxy != nullptr) {
+		auto wgt = _central_proxy->widget();
+		if (wgt) {
+			// QRectF geom(lr_padding, height, width - 2.0*lr_padding, wgt->height());
+			// width += geom.width();
+			ypos += wgt->height() + _item_padding;
+			// _central_proxy->setGeometry(geom);
+		}
+	}
+	*/
+
 
 	// sources are placed bottom/right
 	ypos = _height - _bottom_margin;
@@ -217,9 +233,14 @@ repositionSockets()
 void GraphicsNode::
 updateGeometry()
 {
+	// TODO: proper width computation
+
 	if (!_changed) return;
 
+	qreal width = _min_width;
 	qreal height = _top_margin;
+
+	const qreal lr_padding = 10.0;
 
 	for (size_t i = 0; i < _sinks.size(); i++) {
 		auto s = _sinks[i];
@@ -228,6 +249,15 @@ updateGeometry()
 	}
 
 	// TODO contained element size
+	if (_central_proxy != nullptr) {
+		auto wgt = _central_proxy->widget();
+		if (wgt) {
+			QRectF geom(lr_padding, height, width - 2.0*lr_padding, wgt->height());
+			width += geom.width();
+			height += geom.height() + 2.0 * _item_padding;
+			_central_proxy->setGeometry(geom);
+		}
+	}
 
 	for (size_t i = _sources.size(); i > 0; i--) {
 		auto s = _sources[i-1];
@@ -237,6 +267,7 @@ updateGeometry()
 
 	height += _bottom_margin;
 	_height = std::max(height, _min_height);
+	_width = std::min(width, _min_width);
 
 	// TODO width computation
 	_changed = false;
@@ -259,4 +290,17 @@ get_sink_socket(const size_t id)
 		return _sinks[id];
 	else
 		return nullptr;
+}
+
+
+void GraphicsNode::
+setCentralWidget (QWidget *widget)
+{
+	if (_central_proxy)
+		delete _central_proxy;
+	_central_proxy = new QGraphicsProxyWidget(this);
+	_central_proxy->setWidget(widget);
+	_changed = true;
+	updateGeometry();
+	repositionSockets();
 }

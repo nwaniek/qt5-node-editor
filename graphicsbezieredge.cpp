@@ -65,16 +65,10 @@ GraphicsDirectedEdge::
 }
 
 
-
-
-
 void GraphicsDirectedEdge::
 mousePressEvent(QGraphicsSceneMouseEvent *event) {
 	QGraphicsPathItem::mousePressEvent(event);
 }
-
-
-
 
 
 void GraphicsDirectedEdge::
@@ -106,14 +100,14 @@ void GraphicsDirectedEdge::
 set_start(QPoint p)
 {
 	_start = p;
-	this->setPath(update_path());
+	this->update_path();
 }
 
 void GraphicsDirectedEdge::
 set_stop(QPoint p)
 {
 	_stop = p;
-	this->setPath(update_path());
+	update_path();
 }
 
 void GraphicsDirectedEdge::
@@ -172,8 +166,8 @@ connect_source(GraphicsNodeSocket *source)
 }
 
 
-QPainterPath GraphicsBezierEdge::
-update_path() const {
+void GraphicsBezierEdge::
+update_path() {
 	QPoint c1, c2;
 	QPainterPath path(_start);
 
@@ -195,7 +189,7 @@ update_path() const {
 	c2.setY(_stop.y());
 
 	path.cubicTo(c1, c2, _stop);
-	return path;
+	setPath(path);
 }
 
 void GraphicsBezierEdge::

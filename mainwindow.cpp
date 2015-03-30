@@ -13,6 +13,7 @@
 #include <QTextEdit>
 #include <QStatusBar>
 #include <QResizeEvent>
+#include <QButtonGroup>
 
 #include <iostream>
 
@@ -93,6 +94,12 @@ addNodeViews()
 			n->add_sink("sink");
 			n->add_source("source");
 		}
+
+		if (i == 4) {
+			QTextEdit *te = new QTextEdit();
+			n->setCentralWidget(te);
+		}
+
 		_scene->addItem(n);
 	}
 }

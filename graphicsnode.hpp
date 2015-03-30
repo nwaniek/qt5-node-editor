@@ -14,7 +14,9 @@
 #include "graphicsnodedefs.hpp"
 
 
+class QWidget;
 class QPushButton;
+class QGraphicsProxyWidget;
 class QGraphicsSceneMouseEvent;
 class QGraphicsDropShadowEffect;
 class GraphicsDirectedEdge;
@@ -46,6 +48,13 @@ public:
 	int type() const override {
 		return GraphicsNodeItemTypes::TypeNode;
 	};
+
+
+	/**
+	 * set a regular QWidget as central widget
+	 */
+	void setCentralWidget(QWidget *widget);
+
 
 protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
@@ -84,6 +93,7 @@ private:
 	QBrush _brush_sinks;
 
 	QGraphicsDropShadowEffect *_effect;
+	QGraphicsProxyWidget *_central_proxy = nullptr;
 
 	std::vector<GraphicsNodeSocket*> _sources;
 	std::vector<GraphicsNodeSocket*> _sinks;
