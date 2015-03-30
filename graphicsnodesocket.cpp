@@ -173,7 +173,7 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 
 void GraphicsNodeSocket::
-set_edge(GraphicsEdge *edge) {
+set_edge(GraphicsDirectedEdge *edge) {
 	// TODO: handle edge conflict
 	_edge = edge;
 	notifyPositionChange();
@@ -196,7 +196,7 @@ notifyPositionChange() {
 
 
 
-GraphicsEdge* GraphicsNodeSocket::
+GraphicsDirectedEdge* GraphicsNodeSocket::
 get_edge() {
 	return _edge;
 }

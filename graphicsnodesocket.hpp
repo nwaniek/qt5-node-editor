@@ -11,7 +11,7 @@
 
 class QGraphicsSceneMouseEvent;
 class QGraphicsSceneDragDropEvent;
-class GraphicsEdge;
+class GraphicsDirectedEdge;
 
 
 /**
@@ -46,9 +46,9 @@ public:
 	/**
 	 * set the edge for this socket
 	 */
-	void set_edge(GraphicsEdge *edge);
+	void set_edge(GraphicsDirectedEdge *edge);
 
-	GraphicsEdge *get_edge();
+	GraphicsDirectedEdge *get_edge();
 
 	/**
 	 * notify the socket that its position has changed. this may be either
@@ -104,7 +104,7 @@ private:
 	/*
 	 * edge with which this socket is connected
 	 */
-	GraphicsEdge *_edge;
+	GraphicsDirectedEdge *_edge;
 
 
 private:// some constants. TODO: need to be defined somewhere else (customizable?)

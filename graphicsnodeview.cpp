@@ -227,7 +227,6 @@ leftMouseButtonPress(QMouseEvent *event)
 		if (sock->isInSocketCircle(itemPos)) {
 			viewport()->setCursor(Qt::ClosedHandCursor);
 
-
 			// initialize a new drag mode event
 			_drag_event = new EdgeDragEvent();
 			if ((_tmp_edge = sock->get_edge())) {

@@ -16,18 +16,18 @@ class GraphicsNodeSocket;
 // TODO: move specific draw stuff out of the graphics-edge
 //       this may actually lead to the proper data model for a data layer
 
-class GraphicsEdge : public QGraphicsPathItem
+class GraphicsDirectedEdge : public QGraphicsPathItem
 {
 public:
-	// GraphicsEdge(qreal factor=0.5f);
-	explicit GraphicsEdge(qreal factor=0.5f);
-	GraphicsEdge(int x0, int y0, int x1, int y1, qreal factor=0.5f);
-	GraphicsEdge(QPoint start, QPoint stop, qreal factor=0.5f);
-	GraphicsEdge(QPointF start, QPointF stop, qreal factor=0.5f);
-	GraphicsEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, qreal factor=0.5f);
-	GraphicsEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
+	// GraphicsDirectedEdge(qreal factor=0.5f);
+	explicit GraphicsDirectedEdge(qreal factor=0.5f);
+	GraphicsDirectedEdge(int x0, int y0, int x1, int y1, qreal factor=0.5f);
+	GraphicsDirectedEdge(QPoint start, QPoint stop, qreal factor=0.5f);
+	GraphicsDirectedEdge(QPointF start, QPointF stop, qreal factor=0.5f);
+	GraphicsDirectedEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, qreal factor=0.5f);
+	GraphicsDirectedEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
 
-	~GraphicsEdge();
+	~GraphicsDirectedEdge();
 
 	void connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink);
 	void connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid);
@@ -74,7 +74,7 @@ private:
 };
 
 
-class GraphicsBezierEdge : public GraphicsEdge
+class GraphicsBezierEdge : public GraphicsDirectedEdge
 {
 	virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
 	int type() const override {

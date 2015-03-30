@@ -5,7 +5,7 @@
 #include <QPoint>
 
 class QResizeEvent;
-class GraphicsEdge;
+class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
 
 
@@ -22,7 +22,7 @@ struct EdgeDragEvent
 		move_to_sink
 	};
 
-	GraphicsEdge *e;
+	GraphicsDirectedEdge *e;
 	drag_mode mode;
 };
 
@@ -55,7 +55,7 @@ private:
 	bool _panning;
 	QPoint _pan_cursor_pos;
 
-	GraphicsEdge *_tmp_edge;
+	GraphicsDirectedEdge *_tmp_edge;
 	GraphicsNodeSocket *_sock_source;
 	GraphicsNodeSocket *_sock_sink;
 

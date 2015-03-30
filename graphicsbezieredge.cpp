@@ -11,8 +11,8 @@
 #include "graphicsnodesocket.hpp"
 
 
-GraphicsEdge::
-GraphicsEdge(QPoint start, QPoint stop, qreal factor)
+GraphicsDirectedEdge::
+GraphicsDirectedEdge(QPoint start, QPoint stop, qreal factor)
 : _pen(QColor("#00FF00"))
 , _effect(new QGraphicsDropShadowEffect())
 , _start(start)
@@ -29,38 +29,38 @@ GraphicsEdge(QPoint start, QPoint stop, qreal factor)
 }
 
 
-GraphicsEdge::
-GraphicsEdge(QPointF start, QPointF stop, qreal factor)
-: GraphicsEdge(start.toPoint(), stop.toPoint(), factor) {}
+GraphicsDirectedEdge::
+GraphicsDirectedEdge(QPointF start, QPointF stop, qreal factor)
+: GraphicsDirectedEdge(start.toPoint(), stop.toPoint(), factor) {}
 
 
-GraphicsEdge::
-GraphicsEdge(int x0, int y0, int x1, int y1, qreal factor)
-: GraphicsEdge(QPoint(x0, y0), QPoint(x1, y1), factor) {}
+GraphicsDirectedEdge::
+GraphicsDirectedEdge(int x0, int y0, int x1, int y1, qreal factor)
+: GraphicsDirectedEdge(QPoint(x0, y0), QPoint(x1, y1), factor) {}
 
 
-GraphicsEdge::
-GraphicsEdge(qreal factor)
-: GraphicsEdge(0, 0, 0, 0, factor) {}
+GraphicsDirectedEdge::
+GraphicsDirectedEdge(qreal factor)
+: GraphicsDirectedEdge(0, 0, 0, 0, factor) {}
 
 
-GraphicsEdge::
-GraphicsEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, qreal factor)
-: GraphicsEdge(0, 0, 0, 0, factor)
+GraphicsDirectedEdge::
+GraphicsDirectedEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, qreal factor)
+: GraphicsDirectedEdge(0, 0, 0, 0, factor)
 {
 	connect(n1, sourceid, n2, sinkid);
 }
 
-GraphicsEdge::
-GraphicsEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
-: GraphicsEdge(0, 0, 0, 0, factor)
+GraphicsDirectedEdge::
+GraphicsDirectedEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
+: GraphicsDirectedEdge(0, 0, 0, 0, factor)
 {
 	connect(source, sink);
 }
 
 
-GraphicsEdge::
-~GraphicsEdge()
+GraphicsDirectedEdge::
+~GraphicsDirectedEdge()
 {
 	delete _effect;
 }
@@ -69,13 +69,13 @@ GraphicsEdge::
 
 
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 mousePressEvent(QGraphicsSceneMouseEvent *event) {
 	QGraphicsPathItem::mousePressEvent(event);
 }
 
 
-QPainterPath GraphicsEdge::
+QPainterPath GraphicsDirectedEdge::
 update_path() const {
 	QPoint c1, c2;
 	QPainterPath path(_start);
@@ -102,46 +102,46 @@ update_path() const {
 }
 
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 set_start(int x0, int y0)
 {
 	set_start(QPoint(x0, y0));
 }
 
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 set_stop(int x1, int y1)
 {
 	set_stop(QPoint(x1, y1));
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 set_start(QPointF p)
 {
 	set_start(p.toPoint());
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 set_stop(QPointF p)
 {
 	set_stop(p.toPoint());
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 set_start(QPoint p)
 {
 	_start = p;
 	this->setPath(update_path());
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 set_stop(QPoint p)
 {
 	_stop = p;
 	this->setPath(update_path());
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
 {
 	n1->connect_source(sourceid, this);
@@ -150,7 +150,7 @@ connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
 	_sink = n2->get_sink_socket(sinkid);
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 {
 	source->set_edge(this);
@@ -159,7 +159,7 @@ connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 	_sink = sink;
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 disconnect()
 {
 	if (_source) _source->set_edge(nullptr);
@@ -167,20 +167,20 @@ disconnect()
 }
 
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 disconnect_sink()
 {
 	if (_sink) _sink->set_edge(nullptr);
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 disconnect_source()
 {
 	if (_source) _source->set_edge(nullptr);
 }
 
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 connect_sink(GraphicsNodeSocket *sink)
 {
 	if (_sink) _sink->set_edge(nullptr);
@@ -188,7 +188,7 @@ connect_sink(GraphicsNodeSocket *sink)
 	if (_sink) _sink->set_edge(this);
 }
 
-void GraphicsEdge::
+void GraphicsDirectedEdge::
 connect_source(GraphicsNodeSocket *source)
 {
 	if (_source) _source->set_edge(nullptr);

@@ -173,14 +173,14 @@ add_source(const QString &text)
 
 
 void GraphicsNode::
-connect_source(int i, GraphicsEdge *edge)
+connect_source(int i, GraphicsDirectedEdge *edge)
 {
 	_sources[i]->set_edge(edge);
 }
 
 
 void GraphicsNode::
-connect_sink(int i, GraphicsEdge *edge)
+connect_sink(int i, GraphicsDirectedEdge *edge)
 {
 	_sinks[i]->set_edge(edge);
 }

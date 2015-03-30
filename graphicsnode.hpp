@@ -17,7 +17,7 @@
 class QPushButton;
 class QGraphicsSceneMouseEvent;
 class QGraphicsDropShadowEffect;
-class GraphicsEdge;
+class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
 
 
@@ -40,8 +40,8 @@ public:
 	GraphicsNodeSocket* get_sink_socket(const size_t id);
 
 	// connecting sources and sinks
-	void connect_source(int i, GraphicsEdge *edge);
-	void connect_sink(int i, GraphicsEdge *edge);
+	void connect_source(int i, GraphicsDirectedEdge *edge);
+	void connect_sink(int i, GraphicsDirectedEdge *edge);
 
 	int type() const override {
 		return GraphicsNodeItemTypes::TypeNode;
