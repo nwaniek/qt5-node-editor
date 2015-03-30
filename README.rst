@@ -2,7 +2,7 @@ Qt5 Node Editor
 ===============
 
 an early version of a node editor written in Qt and C++11. may still contain
-lot's of bugs, and some logical issues. upcomming changes will contain (but will
+lots of bugs, and some logical issues. upcomming changes will contain (but will
 not be limited to):
 
 * Qt naming scheme of methods, variables, etc.
