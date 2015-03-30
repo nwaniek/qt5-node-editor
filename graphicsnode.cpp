@@ -6,7 +6,6 @@
 #include <QGraphicsProxyWidget>
 #include <QLineEdit>
 #include <QLabel>
-#include <iostream>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsTextItem>
 #include <QTextDocument>
@@ -14,6 +13,7 @@
 #include <QGraphicsProxyWidget>
 
 #include <algorithm>
+#include <iostream>
 
 #include "graphicsbezieredge.hpp"
 #include "graphicsnodesocket.hpp"
@@ -127,6 +127,30 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 }
 
 
+void GraphicsNode::
+setSize(const qreal width, const qreal height)
+{
+	setSize(QPointF(width, height));
+}
+
+void GraphicsNode::
+setSize(const QPointF size)
+{
+	setSize(QSizeF(size.x(), size.y()));
+}
+
+
+void GraphicsNode::
+setSize(const QSizeF size)
+{
+	_width = size.width();
+	_height = size.height();
+	_changed = true;
+	prepareGeometryChange();
+	updateGeometry();
+}
+
+
 QVariant GraphicsNode::
 itemChange(GraphicsItemChange change, const QVariant &value)
 {
@@ -156,7 +180,6 @@ add_sink(const QString &text)
 	_changed = true;
 	prepareGeometryChange();
 	updateGeometry();
-	repositionSockets();
 	return s;
 }
 
@@ -169,7 +192,6 @@ add_source(const QString &text)
 	_changed = true;
 	prepareGeometryChange();
 	updateGeometry();
-	repositionSockets();
 	return s;
 }
 
@@ -187,89 +209,46 @@ connect_sink(int i, GraphicsDirectedEdge *edge)
 	_sinks[i]->set_edge(edge);
 }
 
-// TODO: merge repositionSockets and updateGeometry
-
-void GraphicsNode::
-repositionSockets()
-{
-	int ypos;
-
-	// compute position of sockets. sinks are placed left/top
-	ypos = _top_margin;
-	for (size_t i = 0; i < _sinks.size(); i++) {
-		auto s = _sinks[i];
-		auto rect = s->boundingRect();
-
-		s->setPos(0, ypos);
-		ypos += rect.height() + _item_padding;
-	}
-
-	/*
-	if (_central_proxy != nullptr) {
-		auto wgt = _central_proxy->widget();
-		if (wgt) {
-			// QRectF geom(lr_padding, height, width - 2.0*lr_padding, wgt->height());
-			// width += geom.width();
-			ypos += wgt->height() + _item_padding;
-			// _central_proxy->setGeometry(geom);
-		}
-	}
-	*/
-
-
-	// sources are placed bottom/right
-	ypos = _height - _bottom_margin;
-	for (size_t i = _sources.size(); i > 0; i--) {
-		auto s = _sources[i-1];
-		auto rect = s->boundingRect();
-
-		// TODO: bottom-margin
-		ypos -= rect.height();
-		s->setPos(_width, ypos);
-		ypos -= _item_padding;
-	}
-}
 
 void GraphicsNode::
 updateGeometry()
 {
-	// TODO: proper width computation
-
 	if (!_changed) return;
 
-	qreal width = _min_width;
-	qreal height = _top_margin;
+	// compute if we have reached the minimum size
+	updateSizeHints();
+	_width = std::max(_min_width, _width);
+	_height = std::max(_min_height, _height);
 
-	const qreal lr_padding = 10.0;
-
+	qreal ypos1 = _top_margin;
 	for (size_t i = 0; i < _sinks.size(); i++) {
 		auto s = _sinks[i];
-		auto rect = s->boundingRect();
-		height += rect.height() + _item_padding;
+		auto size = s->getSize();
+
+		// sockets are centered around 0/0
+		s->setPos(0, ypos1 + size.height()/2.0);
+		ypos1 += size.height() + _item_padding;
 	}
 
-	// TODO contained element size
-	if (_central_proxy != nullptr) {
-		auto wgt = _central_proxy->widget();
-		if (wgt) {
-			QRectF geom(lr_padding, height, width - 2.0*lr_padding, wgt->height());
-			width += geom.width();
-			height += geom.height() + 2.0 * _item_padding;
-			_central_proxy->setGeometry(geom);
-		}
-	}
-
+	// sources are placed bottom/right
+	qreal ypos2 = _height - _bottom_margin;
 	for (size_t i = _sources.size(); i > 0; i--) {
 		auto s = _sources[i-1];
-		auto rect = s->boundingRect();
-		height += rect.height() + _item_padding;
+		auto size = s->getSize();
+
+		ypos2 -= size.height();
+		s->setPos(_width, ypos2 + size.height()/2.0);
+		ypos2 -= _item_padding;
 	}
 
-	height += _bottom_margin;
-	_height = std::max(height, _min_height);
-	_width = std::min(width, _min_width);
 
-	// TODO width computation
+	// central widget
+	if (_central_proxy != nullptr) {
+		QRectF geom(_lr_padding, ypos1, _width - 2.0 * _lr_padding, ypos2 - ypos1);
+		_central_proxy->setGeometry(geom);
+	}
+
+
 	_changed = false;
 }
 
@@ -301,6 +280,61 @@ setCentralWidget (QWidget *widget)
 	_central_proxy = new QGraphicsProxyWidget(this);
 	_central_proxy->setWidget(widget);
 	_changed = true;
+	prepareGeometryChange();
 	updateGeometry();
-	repositionSockets();
+}
+
+void GraphicsNode::
+updateSizeHints() {
+	qreal min_width = 0.0;// _hard_min_width;
+	qreal min_height = _top_margin + _bottom_margin; // _hard_min_height;
+
+	std::cout << "updateSizeHints" << std::endl;
+
+	// sinks
+	for (size_t i = 0; i < _sinks.size(); i++) {
+		auto s = _sinks[i];
+		auto size = s->getMinimalSize();
+
+		min_height += size.height() + _item_padding;
+		min_width = std::max(size.width(), min_width);
+	}
+
+	// central widget
+	if (_central_proxy != nullptr) {
+		auto wgt = _central_proxy->widget();
+		if (wgt) {
+			// only take the size hint if the value is valid, and if
+			// the minimumSize is not set (similar to
+			// QWidget/QLayout standard behavior
+			auto sh = wgt->minimumSizeHint();
+			auto sz = wgt->minimumSize();
+			if (sh.isValid()) {
+				if (sz.height() > 0)
+					min_height += sz.height();
+				else
+					min_height += sh.height();
+
+				if (sz.width() > 0)
+					min_width = std::max(qreal(sz.width()) + 2.0*_lr_padding, min_width);
+				else
+					min_width = std::max(qreal(sh.width()) + 2.0*_lr_padding, min_width);
+			} else {
+				min_height += sh.height();
+				min_width = std::max(qreal(sh.width()) + 2.0*_lr_padding, min_width);
+			}
+		}
+	}
+
+	// sources
+	for (size_t i = 0; i < _sources.size(); i++) {
+		auto s = _sources[i];
+		auto size = s->getMinimalSize();
+
+		min_height += size.height() + _item_padding;
+		min_width = std::max(size.width(), min_width);
+	}
+
+	_min_width = std::max(min_width, _hard_min_width);
+	_min_height = std::max(min_height, _hard_min_height);
 }

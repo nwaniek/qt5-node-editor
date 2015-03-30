@@ -7,6 +7,7 @@
 #include <QPen>
 #include <QBrush>
 #include <QPointF>
+#include <QSizeF>
 #include "graphicsnodedefs.hpp"
 
 class QGraphicsSceneMouseEvent;
@@ -64,6 +65,9 @@ public:
 
 	bool is_sink() const;
 	bool is_source() const;
+
+	QSizeF getSize() const;
+	QSizeF getMinimalSize() const;
 
 	/**
 	 * type of the class. usefull within a QGraphicsScene to distinguish

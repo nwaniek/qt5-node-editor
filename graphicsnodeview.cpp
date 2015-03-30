@@ -8,6 +8,7 @@
 
 #include <iostream>
 
+#include "graphicsnode.hpp"
 #include "graphicsnodesocket.hpp"
 #include "graphicsnodedefs.hpp"
 #include "graphicsbezieredge.hpp"
@@ -125,6 +126,12 @@ leftMouseButtonRelease(QMouseEvent *event)
 		}
 		delete _drag_event;
 		_drag_event = nullptr;
+	} else
+	if (_resize_event) {
+		// TODO: finally set the width/height of the node ?
+		delete _resize_event;
+		_resize_event = nullptr;
+		setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
 	}
 	QGraphicsView::mouseReleaseEvent(event);
 }
@@ -153,7 +160,7 @@ mouseMoveEvent(QMouseEvent *event)
 {
 	// if the left mouse button was pressed and we actually have a mode and
 	// temporary edge already set
-	if ((event->buttons() & Qt::LeftButton) && _drag_event) {
+	if (_drag_event && (event->buttons() & Qt::LeftButton)) {
 
 		// set start/stop depending on drag mode
 		switch (_drag_event->mode) {
@@ -181,6 +188,10 @@ mouseMoveEvent(QMouseEvent *event)
 				viewport()->setCursor(Qt::DragMoveCursor);
 			}
 		}
+	} else
+	if (_resize_event && (event->buttons() & Qt::LeftButton)) {
+		QPointF size = mapToScene(event->pos()) - _resize_event->node->mapToScene(0,0);
+		_resize_event->node->setSize(size);
 	}
 	else {
 		// no button is pressed, so indicate what the user can do with
@@ -203,8 +214,6 @@ mouseMoveEvent(QMouseEvent *event)
 }
 
 
-
-
 void GraphicsNodeView::
 leftMouseButtonPress(QMouseEvent *event)
 {
@@ -217,7 +226,9 @@ leftMouseButtonPress(QMouseEvent *event)
 		return;
 	}
 
-	if (item->type() == GraphicsNodeItemTypes::TypeSocket) {
+	switch (item->type())
+	{
+	case GraphicsNodeItemTypes::TypeSocket: {
 		QPointF scenePos = mapToScene(event->pos());
 		QPointF itemPos = item->mapFromScene(scenePos);
 		GraphicsNodeSocket *sock = static_cast<GraphicsNodeSocket*>(item);
@@ -253,13 +264,34 @@ leftMouseButtonPress(QMouseEvent *event)
 				scene()->addItem(_drag_event->e);
 			}
 			event->ignore();
+		}
+		else {
+			QGraphicsView::mousePressEvent(event);
+		}
+		break;
+	}
+
+	case GraphicsNodeItemTypes::TypeNode: {
+		QPointF scenePos = mapToScene(event->pos());
+		QPointF itemPos = item->mapFromScene(scenePos);
+		GraphicsNode *node = static_cast<GraphicsNode*>(item);
+
+		if (itemPos.x() > (node->width() - 10) && (itemPos.y() > (node->height() - 10))) {
+			setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
+			_resize_event = new NodeResizeEvent();
+			_resize_event->node = node;
+			_resize_event->orig_width = node->width();
+			_resize_event->orig_height = node->height();
+			_resize_event->pos = event->pos();
 			event->ignore();
 		}
 		else {
 			QGraphicsView::mousePressEvent(event);
 		}
+		break;
 	}
-	else {
+
+	default:
 		QGraphicsView::mousePressEvent(event);
 	}
 }

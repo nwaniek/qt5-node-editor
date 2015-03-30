@@ -4,7 +4,9 @@
 #include <QGraphicsView>
 #include <QPoint>
 
+
 class QResizeEvent;
+class GraphicsNode;
 class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
 
@@ -24,6 +26,14 @@ struct EdgeDragEvent
 
 	GraphicsDirectedEdge *e;
 	drag_mode mode;
+};
+
+
+struct NodeResizeEvent
+{
+	GraphicsNode *node;
+	qreal orig_width, orig_height;
+	QPoint pos;
 };
 
 
@@ -60,6 +70,7 @@ private:
 	GraphicsNodeSocket *_sock_sink;
 
 	EdgeDragEvent *_drag_event = nullptr;
+	NodeResizeEvent *_resize_event = nullptr;
 };
 
 #endif /* __GRAPHICSNODEVIEW_HPP__59C6610F_3283_42A1_9102_38A7065DB718 */

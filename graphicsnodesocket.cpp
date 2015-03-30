@@ -69,21 +69,32 @@ is_source() const {
 QRectF GraphicsNodeSocket::
 boundingRect() const
 {
+	QSizeF size = getSize();
+	const qreal x = -_circle_radius - _pen_width/2;
+	const qreal y = -size.height()/2.0 - _pen_width/2;
+	if (_socket_type == SINK)
+		return QRectF(x, y, size.width(), size.height());
+	else
+		return QRectF(-size.width()-x, y, size.width(), size.height());
+}
+
+
+QSizeF GraphicsNodeSocket::
+getMinimalSize() const {
+	QSizeF size;
 	QFont font;
 	QFontMetrics fm(font);
 	int text_width = fm.width(_text);
 	const qreal text_height = static_cast<qreal>(fm.height());
+	size.setWidth(std::max(_min_width, _circle_radius*2 + _text_offset + text_width + _pen_width));
+	size.setHeight(std::max(_min_height, text_height + _pen_width));
+	return size;
+}
 
-	const qreal x = -_circle_radius - _pen_width/2;
-	const qreal y = -text_height/2.0 - _pen_width/2;
 
-	const qreal w = std::max(_min_width, _circle_radius*2 + _text_offset + text_width + _pen_width);
-	const qreal h = std::max(_min_height, text_height + _pen_width);
-
-	if (_socket_type == SINK)
-		return QRectF(x, y, w, h);
-	else
-		return QRectF(-w-x, y, w, h);
+QSizeF GraphicsNodeSocket::
+getSize() const {
+	return getMinimalSize();
 }
 
 

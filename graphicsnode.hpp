@@ -49,6 +49,18 @@ public:
 		return GraphicsNodeItemTypes::TypeNode;
 	};
 
+	qreal width() const {
+		return _width;
+	}
+
+	qreal height() const {
+		return _height;
+	}
+
+	void setSize(const qreal width, const qreal height);
+	void setSize(const QSizeF size);
+	void setSize(const QPointF size);
+
 
 	/**
 	 * set a regular QWidget as central widget
@@ -61,17 +73,23 @@ protected:
 	virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
 private:
-	void repositionSockets();
 	void updateGeometry();
 	void updatePath();
+	void updateSizeHints();
 
 private:
-	const qreal _min_width = 150.0;
-	const qreal _min_height = 120.0;
+	// TODO: change pairs of sizes to QPointF, QSizeF, or quadrupels to QRectF
 
-	const qreal _top_margin = 35.0;
-	const qreal _bottom_margin = 5.0;
+	const qreal _hard_min_width = 150.0;
+	const qreal _hard_min_height = 120.0;
+
+	qreal _min_width = 150.0;
+	qreal _min_height = 120.0;
+
+	const qreal _top_margin = 30.0;
+	const qreal _bottom_margin = 15.0;
 	const qreal _item_padding = 5.0;
+	const qreal _lr_padding = 10.0;
 
 	const qreal _pen_width = 1.0;
 	const qreal _socket_size = 6.0;
