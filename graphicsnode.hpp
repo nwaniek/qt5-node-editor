@@ -17,8 +17,7 @@
 class QPushButton;
 class QGraphicsSceneMouseEvent;
 class QGraphicsDropShadowEffect;
-class GraphicsBezierEdge;
-
+class GraphicsEdge;
 class GraphicsNodeSocket;
 
 
@@ -34,28 +33,28 @@ public:
 			QWidget *widget = 0);
 
 
-	// add a sink to this node
-	const GraphicsNodeSocket* add_sink();
 	const GraphicsNodeSocket* add_sink(const QString &text);
-
-	const GraphicsNodeSocket* add_source();
 	const GraphicsNodeSocket* add_source(const QString &text);
 
-	// connecting sources and sinks
-	void connect_source(int i, GraphicsBezierEdge *edge);
-	void connect_sink(int i, GraphicsBezierEdge *edge);
+	GraphicsNodeSocket* get_source_socket(const size_t id);
+	GraphicsNodeSocket* get_sink_socket(const size_t id);
 
-	int type() const {
+	// connecting sources and sinks
+	void connect_source(int i, GraphicsEdge *edge);
+	void connect_sink(int i, GraphicsEdge *edge);
+
+	int type() const override {
 		return GraphicsNodeItemTypes::TypeNode;
 	};
 
 protected:
-	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-	virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+	virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
 private:
 	void repositionSockets();
 	void updateGeometry();
+	void updatePath();
 
 private:
 	const qreal _min_width = 150.0;
@@ -88,7 +87,6 @@ private:
 
 	std::vector<GraphicsNodeSocket*> _sources;
 	std::vector<GraphicsNodeSocket*> _sinks;
-
 };
 
 #endif /* __GRAPHICSNODE_HPP__0707C377_95A2_4E0B_B98B_7E4813001982 */

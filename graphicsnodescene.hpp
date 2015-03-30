@@ -13,7 +13,7 @@ public:
 	GraphicsNodeScene(QObject *parent);
 
 protected:
-	virtual void drawBackground(QPainter *painter, const QRectF &rect);
+	virtual void drawBackground(QPainter *painter, const QRectF &rect) override;
 
 private:
 	QColor _color_background;

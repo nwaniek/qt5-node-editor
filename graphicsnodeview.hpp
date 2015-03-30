@@ -5,8 +5,27 @@
 #include <QPoint>
 
 class QResizeEvent;
-class GraphicsBezierEdge;
+class GraphicsEdge;
 class GraphicsNodeSocket;
+
+
+struct EdgeDragEvent
+{
+	// encode what the user is actually doing.
+	enum drag_mode {
+		// connect a new edge to a source or sink
+		connect_to_source,
+		connect_to_sink,
+
+		// move an existing edge to another source/sink
+		move_to_source,
+		move_to_sink
+	};
+
+	GraphicsEdge *e;
+	drag_mode mode;
+};
+
 
 class GraphicsNodeView : public QGraphicsView
 {
@@ -36,18 +55,11 @@ private:
 	bool _panning;
 	QPoint _pan_cursor_pos;
 
-
-	enum edge_mode {
-		none = 0,
-		sink_to_source,
-		source_to_sink
-	};
-
-
-	GraphicsBezierEdge *_tmp_edge;
+	GraphicsEdge *_tmp_edge;
 	GraphicsNodeSocket *_sock_source;
 	GraphicsNodeSocket *_sock_sink;
-	edge_mode _mode;
+
+	EdgeDragEvent *_drag_event = nullptr;
 };
 
 #endif /* __GRAPHICSNODEVIEW_HPP__59C6610F_3283_42A1_9102_38A7065DB718 */

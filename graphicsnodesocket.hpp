@@ -11,12 +11,20 @@
 
 class QGraphicsSceneMouseEvent;
 class QGraphicsSceneDragDropEvent;
-class GraphicsBezierEdge;
+class GraphicsEdge;
 
 
+/**
+ * visual representation of a socket. the visual representation consists of a
+ * circle for User Interaction and a label
+ */
 class GraphicsNodeSocket : public QGraphicsItem
 {
 public:
+	/*
+	 * the socket comes in two flavors: either as sink or as source for a
+	 * data stream
+	 */
 	enum GraphicsNodeSocketType
 	{
 		SINK,
@@ -27,31 +35,60 @@ public:
 	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, QGraphicsItem *parent = nullptr);
 	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent = nullptr);
 
-	virtual QRectF boundingRect() const;
+	virtual QRectF boundingRect() const override;
+
+	/*
+	 */
 	virtual void paint(QPainter *painter,
 			const QStyleOptionGraphicsItem *option,
-			QWidget *widget = 0);
+			QWidget *widget = 0) override;
 
-	void set_edge(GraphicsBezierEdge *edge);
+	/**
+	 * set the edge for this socket
+	 */
+	void set_edge(GraphicsEdge *edge);
+
+	GraphicsEdge *get_edge();
+
+	/**
+	 * notify the socket that its position has changed. this may be either
+	 * due to movement within the parent, or due to movement of the parent
+	 * within the parent's parent context.
+	 */
 	void notifyPositionChange();
 
+	/**
+	 * get the socket-type of this socket
+	 */
 	GraphicsNodeSocketType socket_type() const;
 
-	int type() const {
+	bool is_sink() const;
+	bool is_source() const;
+
+	/**
+	 * type of the class. usefull within a QGraphicsScene to distinguish
+	 * what is really behind a pointer
+	 */
+	int type() const override {
 		return GraphicsNodeItemTypes::TypeSocket;
 	};
 
+	/**
+	 * determine if a point is actually within the socket circle.
+	 */
 	bool isInSocketCircle(const QPointF &p) const;
 
 	// return the anchor position relative to the scene in which the socket
 	// is living in
 	QPointF sceneAnchorPos() const;
 
+
+
 protected:
 	// event handling
-	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-	virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
-	virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+	virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+	virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 
 private:
 	void drawAlignedText(QPainter *painter);
@@ -64,7 +101,10 @@ private:
 	const QBrush _brush_circle;
 	const QString _text;
 
-	GraphicsBezierEdge *_edge;
+	/*
+	 * edge with which this socket is connected
+	 */
+	GraphicsEdge *_edge;
 
 
 private:// some constants. TODO: need to be defined somewhere else (customizable?)

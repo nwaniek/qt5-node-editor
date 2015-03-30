@@ -23,6 +23,7 @@ set(SRC
 	main.cpp
 	mainwindow.cpp
 	node.cpp
+	edge.cpp
 	graphicsbezieredge.cpp
 	graphicsnode.cpp
 	graphicsnodeview.cpp
@@ -32,6 +33,7 @@ set(SRC
 set(HEADERS
 	mainwindow.hpp
 	node.hpp
+	edge.hpp
 	graphicsbezieredge.hpp
 	graphicsnode.hpp
 	graphicsnodeview.hpp

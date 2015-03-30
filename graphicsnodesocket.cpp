@@ -55,6 +55,17 @@ socket_type() const {
 }
 
 
+bool GraphicsNodeSocket::
+is_sink() const {
+	return _socket_type == SINK;
+}
+
+bool GraphicsNodeSocket::
+is_source() const {
+	return _socket_type == SOURCE;
+}
+
+
 QRectF GraphicsNodeSocket::
 boundingRect() const
 {
@@ -162,7 +173,7 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 
 void GraphicsNodeSocket::
-set_edge(GraphicsBezierEdge *edge) {
+set_edge(GraphicsEdge *edge) {
 	// TODO: handle edge conflict
 	_edge = edge;
 	notifyPositionChange();
@@ -181,5 +192,12 @@ notifyPositionChange() {
 		_edge->set_start(mapToScene(0,0));
 		break;
 	}
+}
+
+
+
+GraphicsEdge* GraphicsNodeSocket::
+get_edge() {
+	return _edge;
 }
 

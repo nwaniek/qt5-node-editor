@@ -70,7 +70,6 @@ GraphicsNode::
 QRectF GraphicsNode::
 boundingRect() const
 {
-
 	return QRectF(-_pen_width - _socket_size,
 			-_pen_width,
 			_width + _pen_width + _socket_size,
@@ -105,7 +104,7 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 	painter->drawPath(path_content.simplified());
 
 	// path for the outline
-	QPainterPath path_outline;
+	QPainterPath path_outline = QPainterPath();
 	path_outline.addRoundedRect(QRect(0, 0, _width, _height), edge_size, edge_size);
 	painter->setPen(isSelected() ? _pen_selected : _pen_default);
 	painter->setBrush(Qt::NoBrush);
@@ -117,6 +116,7 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 void GraphicsNode::
 mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+	// TODO: ordering after selection/deselection cycle
 	QGraphicsItem::mousePressEvent(event);
 	if (isSelected())
 		setZValue(1);
@@ -147,13 +147,6 @@ itemChange(GraphicsItemChange change, const QVariant &value)
 
 
 const GraphicsNodeSocket* GraphicsNode::
-add_sink()
-{
-	return add_sink("");
-}
-
-
-const GraphicsNodeSocket* GraphicsNode::
 add_sink(const QString &text)
 {
 	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SINK, text, this);
@@ -163,13 +156,6 @@ add_sink(const QString &text)
 	updateGeometry();
 	repositionSockets();
 	return s;
-}
-
-
-const GraphicsNodeSocket* GraphicsNode::
-add_source()
-{
-	return add_source("");
 }
 
 
@@ -187,14 +173,14 @@ add_source(const QString &text)
 
 
 void GraphicsNode::
-connect_source(int i, GraphicsBezierEdge *edge)
+connect_source(int i, GraphicsEdge *edge)
 {
 	_sources[i]->set_edge(edge);
 }
 
 
 void GraphicsNode::
-connect_sink(int i, GraphicsBezierEdge *edge)
+connect_sink(int i, GraphicsEdge *edge)
 {
 	_sinks[i]->set_edge(edge);
 }
@@ -228,7 +214,6 @@ repositionSockets()
 	}
 }
 
-
 void GraphicsNode::
 updateGeometry()
 {
@@ -253,9 +238,25 @@ updateGeometry()
 	height += _bottom_margin;
 	_height = std::max(height, _min_height);
 
-
-
 	// TODO width computation
-
 	_changed = false;
+}
+
+
+GraphicsNodeSocket* GraphicsNode::
+get_source_socket(const size_t id)
+{
+	if (id < _sources.size())
+		return _sources[id];
+	else
+		return nullptr;
+}
+
+GraphicsNodeSocket* GraphicsNode::
+get_sink_socket(const size_t id)
+{
+	if (id < _sinks.size())
+		return _sinks[id];
+	else
+		return nullptr;
 }

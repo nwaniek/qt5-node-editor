@@ -32,7 +32,10 @@ GraphicsNodeScene::GraphicsNodeScene(QObject *parent)
 	nulltext->setDefaultTextColor(_color_null);
 }
 
-
+/*
+ * TODO: move the visualization into the graphicsview, and move all the GUI
+ * logic into the graphicsnodescene
+ */
 void GraphicsNodeScene::
 drawBackground(QPainter *painter, const QRectF &rect)
 {
