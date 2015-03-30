@@ -14,6 +14,7 @@
 #include <QStatusBar>
 #include <QResizeEvent>
 #include <QButtonGroup>
+#include <QString>
 
 #include <iostream>
 
@@ -99,6 +100,8 @@ addNodeViews()
 			QTextEdit *te = new QTextEdit();
 			n->setCentralWidget(te);
 		}
+
+		n->setTitle(QString("GraphicsNode %1").arg(i));
 
 		_scene->addItem(n);
 	}

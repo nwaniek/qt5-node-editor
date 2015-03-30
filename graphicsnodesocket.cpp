@@ -73,9 +73,9 @@ boundingRect() const
 	const qreal x = -_circle_radius - _pen_width/2;
 	const qreal y = -size.height()/2.0 - _pen_width/2;
 	if (_socket_type == SINK)
-		return QRectF(x, y, size.width(), size.height());
+		return QRectF(x, y, size.width(), size.height()).normalized();
 	else
-		return QRectF(-size.width()-x, y, size.width(), size.height());
+		return QRectF(-size.width()-x, y, size.width(), size.height()).normalized();
 }
 
 

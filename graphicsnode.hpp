@@ -19,6 +19,7 @@ class QPushButton;
 class QGraphicsProxyWidget;
 class QGraphicsSceneMouseEvent;
 class QGraphicsDropShadowEffect;
+class QGraphicsTextItem;
 class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
 
@@ -57,6 +58,8 @@ public:
 		return _height;
 	}
 
+	void setTitle(const QString &title);
+
 	void setSize(const qreal width, const qreal height);
 	void setSize(const QSizeF size);
 	void setSize(const QPointF size);
@@ -76,6 +79,7 @@ private:
 	void updateGeometry();
 	void updatePath();
 	void updateSizeHints();
+	void propagateChanges();
 
 private:
 	// TODO: change pairs of sizes to QPointF, QSizeF, or quadrupels to QRectF
@@ -94,7 +98,6 @@ private:
 	const qreal _pen_width = 1.0;
 	const qreal _socket_size = 6.0;
 
-
 	bool _changed;
 
 	qreal _width;
@@ -111,7 +114,10 @@ private:
 	QBrush _brush_sinks;
 
 	QGraphicsDropShadowEffect *_effect;
+	QGraphicsTextItem *_title_item;
 	QGraphicsProxyWidget *_central_proxy = nullptr;
+
+	QString _title;
 
 	std::vector<GraphicsNodeSocket*> _sources;
 	std::vector<GraphicsNodeSocket*> _sinks;
