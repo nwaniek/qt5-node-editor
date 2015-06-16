@@ -17,6 +17,7 @@
 #include <QResizeEvent>
 #include <QButtonGroup>
 #include <QString>
+#include <QLineEdit>
 
 #include <iostream>
 
@@ -25,6 +26,9 @@
 #include "graphicsnodeview.hpp"
 #include "graphicsnode.hpp"
 #include "graphicsbezieredge.hpp"
+
+#include "qobjectnode.hpp"
+#include "test_qobjects.hpp"
 
 
 MainWindow::MainWindow()
@@ -90,6 +94,7 @@ addFakeContent()
 void MainWindow::
 addNodeViews()
 {
+    /*
 	for (int i = 0; i < 5; i++) {
 		auto n = new GraphicsNode();
 		for (int j = i; j < 5; j++) {
@@ -107,5 +112,15 @@ addNodeViews()
 
 		_scene->addItem(n);
 	}
+    */
+
+    QObject* t1 = new testnode1();
+    auto n = new qObjectnode(t1);
+    _scene->addItem(n);
+
+    t1 = new QLineEdit();
+    n = new qObjectnode(t1);
+    _scene->addItem(n);
+
 }
 
