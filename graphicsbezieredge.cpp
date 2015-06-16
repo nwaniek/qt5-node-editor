@@ -8,6 +8,8 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsDropShadowEffect>
 #include <iostream>
+#include <QMetaProperty>
+#include <QDebug>
 
 #include "graphicsnode.hpp"
 #include "graphicsnodesocket.hpp"
@@ -69,7 +71,33 @@ GraphicsDirectedEdge::
 
 void GraphicsDirectedEdge::
 mousePressEvent(QGraphicsSceneMouseEvent *event) {
-	QGraphicsPathItem::mousePressEvent(event);
+    QGraphicsPathItem::mousePressEvent(event);
+}
+
+void GraphicsDirectedEdge::onSourceDataChange()
+{
+    QVariant var;
+    // get Soutrce Data
+
+    QObject* data1 = _source->m_data;
+    const QMetaObject* mo1 = data1->metaObject();
+    QMetaProperty mp1 = mo1->property(_source->m_index);
+    const char *name1 = mp1.name();
+
+    var = data1->property(name1);
+
+    // set sink
+
+    QObject* data2 = _sink->m_data;
+    const QMetaObject* mo2 = data2->metaObject();
+    QMetaProperty mp2 = mo2->property(_sink->m_index);
+    const char * name2 = mp2.name();
+
+    if(!data2->setProperty(name2,var))
+    {
+        qWarning() << "Error Writing QVariant "<< var << "[ " <<name1<<" -> " <<name2<<" ]";
+    }
+
 }
 
 
@@ -115,15 +143,26 @@ set_stop(QPoint p)
 void GraphicsDirectedEdge::
 connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
 {
+    if (_source)
+        QObject::disconnect(this,SLOT(onSourceDataChange()));
+
 	n1->connect_source(sourceid, this);
 	n2->connect_sink(sinkid, this);
-	_source = n1->get_source_socket(sourceid);
+
+    connect_source(n1->get_source_socket(sourceid));
 	_sink = n2->get_sink_socket(sinkid);
 }
 
 void GraphicsDirectedEdge::
 connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 {
+    if (_source)
+    {
+        QObject* data = _source->m_data;
+        if(data!=0)
+            QObject::disconnect(data,0,this,0);
+    }
+
 	source->set_edge(this);
 	sink->set_edge(this);
 	_source = source;
@@ -133,7 +172,13 @@ connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 void GraphicsDirectedEdge::
 disconnect()
 {
-	if (_source) _source->set_edge(nullptr);
+    if (_source)
+    {
+        _source->set_edge(nullptr);
+        QObject* data = _source->m_data;
+        if(data!=0)
+            QObject::disconnect(data,0,this,0);
+    }
 	if (_sink) _sink->set_edge(nullptr);
 }
 
@@ -147,7 +192,13 @@ disconnect_sink()
 void GraphicsDirectedEdge::
 disconnect_source()
 {
-	if (_source) _source->set_edge(nullptr);
+    if (_source)
+    {
+        _source->set_edge(nullptr);
+        QObject* data = _source->m_data;
+        if(data!=0)
+            QObject::disconnect(data,0,this,0);
+    }
 }
 
 
@@ -156,15 +207,40 @@ connect_sink(GraphicsNodeSocket *sink)
 {
 	if (_sink) _sink->set_edge(nullptr);
 	_sink = sink;
-	if (_sink) _sink->set_edge(this);
+    if (_sink)
+    {
+        _sink->set_edge(this);
+    }
 }
 
 void GraphicsDirectedEdge::
 connect_source(GraphicsNodeSocket *source)
 {
-	if (_source) _source->set_edge(nullptr);
-	_source = source;
-	if (_source) _source->set_edge(this);
+    if (_source){
+        _source->set_edge(nullptr);
+
+        QObject* data = _source->m_data;
+        if(data!=0)
+            QObject::disconnect(data,0,this,0);
+    }
+    _source = source;
+    if (_source){
+
+        _source->set_edge(this);
+
+        QObject* data = _source->m_data;
+       if(data!=0)
+       {
+           const QMetaObject* mo = data->metaObject();
+           QMetaProperty mp = mo->property(_source->m_index);
+           QMetaMethod 	notifySignal = mp.notifySignal();
+
+           int functionIndex = metaObject()->indexOfSlot("onSourceDataChange()");
+           QMetaMethod edgeInternalSlot = metaObject()->method(functionIndex);
+
+           QObject::connect(data,notifySignal,this,edgeInternalSlot);
+       }
+    }
 }
 
 

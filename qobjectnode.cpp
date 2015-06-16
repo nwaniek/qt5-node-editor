@@ -22,9 +22,11 @@ qObjectnode::qObjectnode(QObject *data, QGraphicsItem *parent):GraphicsNode(pare
             if(prop.isConstant() || !prop.isUser())
                 continue;
             if(prop.isReadable() && prop.hasNotifySignal())
-                add_source(prop.name());
+            {
+                add_source(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",m_data,property_count);
+            }
             if(prop.isWritable())
-                add_sink(prop.name());
+                add_sink(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",m_data,property_count);
         }
     }
 }
