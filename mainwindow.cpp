@@ -94,7 +94,7 @@ addFakeContent()
 void MainWindow::
 addNodeViews()
 {
-    /*
+	/*
 	for (int i = 0; i < 5; i++) {
 		auto n = new GraphicsNode();
 		for (int j = i; j < 5; j++) {
@@ -112,31 +112,29 @@ addNodeViews()
 
 		_scene->addItem(n);
 	}
-    */
+	*/
 
+	QObject* t1 = new QLineEdit();
+	qObjectnode* n1 = new qObjectnode(t1);
+	_scene->addItem(n1);
+	n1->setPos(0,0);
 
-    QObject* t1 = new QLineEdit();
-    qObjectnode* n1 = new qObjectnode(t1);
-    _scene->addItem(n1);
-    n1->setPos(0,0);
+	t1 = new testnode1();
+	qObjectnode* n2 = new qObjectnode(t1);
+	_scene->addItem(n2);
+	n2->setPos(0+n1->width()*1.5,0);
 
-    t1 = new testnode1();
-    qObjectnode* n2 = new qObjectnode(t1);
-    _scene->addItem(n2);
-    n2->setPos(0+n1->width()*1.5,0);
+	GraphicsDirectedEdge* e12 = new GraphicsBezierEdge();
+	e12->connect(n1,0,n2,0);
+	_scene->addItem(e12);
 
+	t1 = new QLineEdit();
+	qObjectnode* n3 = new qObjectnode(t1);
+	_scene->addItem(n3);
+	n3->setPos(n2->pos().x()+n2->width()*1.5,0);
 
-    GraphicsDirectedEdge* e12 = new GraphicsBezierEdge();
-    e12->connect(n1,0,n2,0);
-    _scene->addItem(e12);
-
-    t1 = new QLineEdit();
-    qObjectnode* n3 = new qObjectnode(t1);
-    _scene->addItem(n3);
-    n3->setPos(n2->pos().x()+n2->width()*1.5,0);
-
-    GraphicsDirectedEdge* e23 = new GraphicsBezierEdge();
-    e23->connect(n2,0,n3,0);
-    _scene->addItem(e23);
+	GraphicsDirectedEdge* e23 = new GraphicsBezierEdge();
+	e23->connect(n2,0,n3,0);
+	_scene->addItem(e23);
 }
 

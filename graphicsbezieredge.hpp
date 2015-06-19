@@ -62,7 +62,7 @@ protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
 protected slots:
-    void onSourceDataChange(); // cant use QVariant argument, since it might be another type
+	void onSourceDataChange(); // cant use QVariant argument, since it might be another type
 
 protected:
 	virtual void update_path() = 0;

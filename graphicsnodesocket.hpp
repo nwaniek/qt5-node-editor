@@ -23,7 +23,7 @@ class GraphicsDirectedEdge;
  */
 class GraphicsNodeSocket : public QGraphicsItem
 {
-    friend class GraphicsDirectedEdge;
+	friend class GraphicsDirectedEdge;
 public:
 	/*
 	 * the socket comes in two flavors: either as sink or as source for a
@@ -36,8 +36,8 @@ public:
 	};
 
 
-    GraphicsNodeSocket(GraphicsNodeSocketType socket_type, QGraphicsItem *parent = nullptr);
-    GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent = nullptr,QObject *data=0,int index=0);
+	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, QGraphicsItem *parent = nullptr);
+	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent = nullptr,QObject *data=0,int index=0);
 
 	virtual QRectF boundingRect() const override;
 
@@ -112,8 +112,8 @@ private:
 	 * edge with which this socket is connected
 	 */
 	GraphicsDirectedEdge *_edge;
-    QObject* m_data;
-    int m_index;
+	QObject* m_data;
+	int m_index;
 
 
 private:// some constants. TODO: need to be defined somewhere else (customizable?)
