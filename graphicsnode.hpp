@@ -38,8 +38,8 @@ public:
 			QWidget *widget = 0);
 
 
-	const GraphicsNodeSocket* add_sink(const QString &text);
-	const GraphicsNodeSocket* add_source(const QString &text);
+    const GraphicsNodeSocket* add_sink(const QString &text,QObject *data=0,int id=0);
+    const GraphicsNodeSocket* add_source(const QString &text,QObject *data=0,int id=0);
 
 	GraphicsNodeSocket* get_source_socket(const size_t id);
 	GraphicsNodeSocket* get_sink_socket(const size_t id);

@@ -29,6 +29,9 @@ set(SRC
 	graphicsnodeview.cpp
 	graphicsnodescene.cpp
 	graphicsnodesocket.cpp
+
+        qobjectnode.cpp
+        test_qobjects.cpp
 	)
 set(HEADERS
 	mainwindow.hpp
@@ -40,6 +43,9 @@ set(HEADERS
 	graphicsnodescene.hpp
 	graphicsnodesocket.hpp
 	graphicsnodedefs.hpp
+
+        qobjectnode.hpp
+        test_qobjects.hpp
 )
 
 # include(${QT_USE_FILE})
@@ -49,7 +55,6 @@ include_directories(
 	)
 add_executable(${PROJECT_NAME} ${SRC} ${HEADERS_MOC} ${HEADERS})
 target_link_libraries(${PROJECT_NAME}
-	m
 	#	pthread
 	#	hdf5
 	#	hdf5_cpp

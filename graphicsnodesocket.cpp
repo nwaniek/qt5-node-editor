@@ -37,7 +37,7 @@ GraphicsNodeSocket(GraphicsNodeSocketType type, QGraphicsItem *parent)
 
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent)
+GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent, QObject *data,int index)
 : QGraphicsItem(parent)
 , _socket_type(socket_type)
 , _pen_circle(PEN_COLOR_CIRCLE)
@@ -45,6 +45,7 @@ GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGra
 , _brush_circle((socket_type == SINK) ? BRUSH_COLOR_SINK : BRUSH_COLOR_SOURCE)
 , _text(text)
 , _edge(nullptr)
+,m_data(data),m_index(index)
 {
 	_pen_circle.setWidth(0);
 	setAcceptDrops(true);

@@ -18,8 +18,9 @@ class GraphicsNodeSocket;
 // TODO: move specific draw stuff out of the graphics-edge
 //       this may actually lead to the proper data model for a data layer
 
-class GraphicsDirectedEdge : public QGraphicsPathItem
+class GraphicsDirectedEdge : public QObject, public QGraphicsPathItem
 {
+    Q_OBJECT
 public:
 	// GraphicsDirectedEdge(qreal factor=0.5f);
 	explicit GraphicsDirectedEdge(qreal factor=0.5f);
@@ -59,6 +60,9 @@ public:
 
 protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+
+protected slots:
+    void onSourceDataChange(); // cant use QVariant argument, since it might be another type
 
 protected:
 	virtual void update_path() = 0;
