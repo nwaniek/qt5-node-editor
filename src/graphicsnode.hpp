@@ -32,10 +32,10 @@ public:
 	GraphicsNode(QGraphicsItem *parent = nullptr);
 	virtual ~GraphicsNode();
 
-	virtual QRectF boundingRect() const;
+	virtual QRectF boundingRect() const override;
 	virtual void paint(QPainter *painter,
 			const QStyleOptionGraphicsItem *option,
-			QWidget *widget = 0);
+			QWidget *widget = 0) override;
 
 
 	const GraphicsNodeSocket* add_sink(const QString &text,QObject *data=0,int id=0);

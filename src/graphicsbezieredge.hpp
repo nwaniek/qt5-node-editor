@@ -80,7 +80,7 @@ protected:
 
 class GraphicsBezierEdge : public GraphicsDirectedEdge
 {
-	virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
+	virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0) override;
 	int type() const override {
 		return GraphicsNodeItemTypes::TypeBezierEdge;
 	}
