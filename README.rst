@@ -8,7 +8,25 @@ not be limited to):
 * Qt naming scheme of methods, variables, etc.
 * develop data model
 * moving some of the UI logic to the data model (node.hpp and node.cpp)
+* restructuring the directory
+* providing cmake file to generate a library
 
 Example:
 
 .. figure:: doc/example_editor01.png
+
+
+
+How to build
+------------
+
+You need cmake (>= 2.8.8 should work), and a recent C++ compiler. For an
+out-of-directory build (recommended), create a build folder, and call cmake/make
+in there:
+
+        $ mkdir build
+        $ cd build
+        $ cmake ..
+        $ make
+
+All binaries will be placed into the root-build folder

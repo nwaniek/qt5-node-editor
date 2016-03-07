@@ -21,13 +21,13 @@
 
 #include <iostream>
 
-#include "graphicsnodescene.hpp"
-#include "graphicsnodeview.hpp"
-#include "graphicsnodeview.hpp"
-#include "graphicsnode.hpp"
-#include "graphicsbezieredge.hpp"
+#include <graphicsnodescene.hpp>
+#include <graphicsnodeview.hpp>
+#include <graphicsnodeview.hpp>
+#include <graphicsnode.hpp>
+#include <graphicsbezieredge.hpp>
+#include <qobjectnode.hpp>
 
-#include "qobjectnode.hpp"
 #include "test_qobjects.hpp"
 
 
