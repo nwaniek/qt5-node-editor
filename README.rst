@@ -29,4 +29,5 @@ in there:
         $ cmake ..
         $ make
 
-All binaries will be placed into the root-build folder
+The library will end up in lib/ of your build directory, all compiled examples
+in bin/
