@@ -26,6 +26,8 @@ How to build
 You need cmake (>= 2.8.8), and a recent C++ compiler. For an out-of-directory
 build (recommended), create a build folder, and call cmake/make in there:
 
+.. bash::
+
         $ mkdir build
         $ cd build
         $ cmake ..
