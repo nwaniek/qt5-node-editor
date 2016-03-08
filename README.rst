@@ -11,7 +11,10 @@ not be limited to):
 * restructuring the directory
 * providing cmake file to generate a library
 
-Example:
+Hence, *be warned* that the API is not settled yet and is likely to change in
+future releases.
+
+Example Screenshot:
 
 .. figure:: doc/example_editor01.png
 
@@ -20,9 +23,8 @@ Example:
 How to build
 ------------
 
-You need cmake (>= 2.8.8 should work), and a recent C++ compiler. For an
-out-of-directory build (recommended), create a build folder, and call cmake/make
-in there:
+You need cmake (>= 2.8.8), and a recent C++ compiler. For an out-of-directory
+build (recommended), create a build folder, and call cmake/make in there:
 
         $ mkdir build
         $ cd build
@@ -30,4 +32,4 @@ in there:
         $ make
 
 The library will end up in lib/ of your build directory, all compiled examples
-in bin/
+in bin/.
