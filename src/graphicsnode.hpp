@@ -72,7 +72,6 @@ public:
 	 */
 	void setCentralWidget(QWidget *widget);
 
-
 protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 	virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;

@@ -17,6 +17,9 @@
 #include <QResizeEvent>
 #include <QButtonGroup>
 #include <QString>
+#include <QMenu>
+#include <QMenuBar>
+#include <QAction>
 #include <QLineEdit>
 
 #include <iostream>
@@ -35,6 +38,12 @@ MainWindow::MainWindow()
 : _view(nullptr)
 , _scene(nullptr)
 {
+	_mnuFile = new QMenu(tr("File"));
+	menuBar()->addMenu(_mnuFile);
+
+	_actClear = new QAction(tr("Clear"), this);
+	connect(_actClear, &QAction::triggered, this, &MainWindow::onClearTriggered);
+	_mnuFile->addAction(_actClear);
 
 	// create and configure scene
 	_scene = new GraphicsNodeScene(this);
@@ -45,18 +54,24 @@ MainWindow::MainWindow()
 	_view->setScene(_scene);
 	this->setCentralWidget(_view);
 
-
 	// add some content
-	//addFakeContent()
+	//addFakeContent();
 	addNodeViews();
 }
+
+
+void MainWindow::
+onClearTriggered()
+{
+	_scene->clear();
+}
+
 
 void MainWindow::
 resizeEvent(QResizeEvent *event)
 {
 	QMainWindow::resizeEvent(event);
 }
-
 
 
 void MainWindow::
@@ -94,7 +109,7 @@ addFakeContent()
 void MainWindow::
 addNodeViews()
 {
-	/*
+#if 1
 	for (int i = 0; i < 5; i++) {
 		auto n = new GraphicsNode();
 		for (int j = i; j < 5; j++) {
@@ -112,15 +127,15 @@ addNodeViews()
 
 		_scene->addItem(n);
 	}
-	*/
 
+#else
 	QObject* t1 = new QLineEdit();
-	qObjectnode* n1 = new qObjectnode(t1);
+	QObjectnode* n1 = new QObjectnode(t1);
 	_scene->addItem(n1);
 	n1->setPos(0,0);
 
 	t1 = new testnode1();
-	qObjectnode* n2 = new qObjectnode(t1);
+	QObjectnode* n2 = new QObjectnode(t1);
 	_scene->addItem(n2);
 	n2->setPos(0+n1->width()*1.5,0);
 
@@ -129,12 +144,13 @@ addNodeViews()
 	_scene->addItem(e12);
 
 	t1 = new QLineEdit();
-	qObjectnode* n3 = new qObjectnode(t1);
+	QObjectnode* n3 = new QObjectnode(t1);
 	_scene->addItem(n3);
 	n3->setPos(n2->pos().x()+n2->width()*1.5,0);
 
 	GraphicsDirectedEdge* e23 = new GraphicsBezierEdge();
 	e23->connect(n2,0,n3,0);
 	_scene->addItem(e23);
+#endif
 }
 

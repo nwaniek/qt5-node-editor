@@ -34,6 +34,7 @@ GraphicsNodeScene::GraphicsNodeScene(QObject *parent)
 	nulltext->setDefaultTextColor(_color_null);
 }
 
+
 /*
  * TODO: move the visualization into the graphicsview, and move all the GUI
  * logic into the graphicsnodescene
@@ -75,7 +76,6 @@ drawBackground(QPainter *painter, const QRectF &rect)
 	std::vector<QLine> lines_null;
 	lines_null.push_back(QLine(0, top, 0, bottom));
 	lines_null.push_back(QLine(left, 0, right, 0));
-
 
 	// draw calls
 	painter->setPen(_pen_light);

@@ -226,14 +226,18 @@ add_source(const QString &text,QObject *data,int id)
 void GraphicsNode::
 connect_source(int i, GraphicsDirectedEdge *edge)
 {
+	auto old_edge = _sources[i]->get_edge();
 	_sources[i]->set_edge(edge);
+	if (old_edge) old_edge->sourceDisconnected(this, _sources[i]);
 }
 
 
 void GraphicsNode::
 connect_sink(int i, GraphicsDirectedEdge *edge)
 {
+	auto old_edge = _sinks[i]->get_edge();
 	_sinks[i]->set_edge(edge);
+	if (old_edge) old_edge->sinkDisconnected(this, _sinks[i]);
 }
 
 

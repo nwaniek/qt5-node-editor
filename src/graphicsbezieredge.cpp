@@ -54,6 +54,7 @@ GraphicsDirectedEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinki
 	connect(n1, sourceid, n2, sinkid);
 }
 
+
 GraphicsDirectedEdge::
 GraphicsDirectedEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
 : GraphicsDirectedEdge(0, 0, 0, 0, factor)
@@ -70,7 +71,8 @@ GraphicsDirectedEdge::
 
 
 void GraphicsDirectedEdge::
-mousePressEvent(QGraphicsSceneMouseEvent *event) {
+mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
     QGraphicsPathItem::mousePressEvent(event);
 }
 
@@ -141,6 +143,7 @@ set_stop(QPoint p)
 	update_path();
 }
 
+
 void GraphicsDirectedEdge::
 connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
 {
@@ -154,13 +157,13 @@ connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
 	_sink = n2->get_sink_socket(sinkid);
 }
 
+
 void GraphicsDirectedEdge::
 connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 {
 	if (_source) {
 		QObject* data = _source->m_data;
-		if(data!=0)
-		    QObject::disconnect(data,0,this,0);
+		if (data) QObject::disconnect(data,0,this,0);
 	}
 
 	source->set_edge(this);
@@ -169,14 +172,14 @@ connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 	_sink = sink;
 }
 
+
 void GraphicsDirectedEdge::
 disconnect()
 {
 	if (_source) {
 		_source->set_edge(nullptr);
 		QObject* data = _source->m_data;
-		if(data!=0)
-			QObject::disconnect(data,0,this,0);
+		if (data) QObject::disconnect(data,0,this,0);
 	}
 	if (_sink) _sink->set_edge(nullptr);
 }
@@ -188,14 +191,14 @@ disconnect_sink()
 	if (_sink) _sink->set_edge(nullptr);
 }
 
+
 void GraphicsDirectedEdge::
 disconnect_source()
 {
 	if (_source) {
 		_source->set_edge(nullptr);
 		QObject* data = _source->m_data;
-		if(data!=0)
-			QObject::disconnect(data,0,this,0);
+		if (data) QObject::disconnect(data,0,this,0);
 	}
 }
 
@@ -208,6 +211,7 @@ connect_sink(GraphicsNodeSocket *sink)
 	if (_sink) _sink->set_edge(this);
 }
 
+
 void GraphicsDirectedEdge::
 connect_source(GraphicsNodeSocket *source)
 {
@@ -215,8 +219,7 @@ connect_source(GraphicsNodeSocket *source)
 		_source->set_edge(nullptr);
 
 		QObject* data = _source->m_data;
-		if(data!=0)
-			QObject::disconnect(data,0,this,0);
+		if (data) QObject::disconnect(data, 0, this, 0);
 	}
 
 	_source = source;
@@ -225,7 +228,7 @@ connect_source(GraphicsNodeSocket *source)
 		_source->set_edge(this);
 
 		QObject* data = _source->m_data;
-		if(data!=0) {
+		if (data) {
 			const QMetaObject* mo = data->metaObject();
 			QMetaProperty mp = mo->property(_source->m_index);
 			QMetaMethod notifySignal = mp.notifySignal();
@@ -233,9 +236,21 @@ connect_source(GraphicsNodeSocket *source)
 			int functionIndex = metaObject()->indexOfSlot("onSourceDataChange()");
 			QMetaMethod edgeInternalSlot = metaObject()->method(functionIndex);
 
-			QObject::connect(data,notifySignal,this,edgeInternalSlot);
+			QObject::connect(data, notifySignal, this, edgeInternalSlot);
 		}
 	}
+}
+
+
+void GraphicsDirectedEdge::
+sinkDisconnected(GraphicsNode *node, GraphicsNodeSocket *sink)
+{
+}
+
+
+void GraphicsDirectedEdge::
+sourceDisconnected(GraphicsNode *node, GraphicsNodeSocket *source)
+{
 }
 
 
@@ -266,9 +281,11 @@ update_path()
 	setPath(path);
 }
 
+
 void GraphicsBezierEdge::
 paint(QPainter * painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/)
 {
 	painter->setPen(_pen);
 	painter->drawPath(path());
 }
+

@@ -6,7 +6,7 @@ lots of bugs, and some logical issues. upcomming changes will contain (but will
 not be limited to):
 
 * Qt naming scheme of methods, variables, etc.
-* develop data model
+* develop data model. At the moment it's just VC instead of MVC
 * moving some of the UI logic to the data model (node.hpp and node.cpp)
 * restructuring the directory
 * providing cmake file to generate a library

@@ -190,8 +190,8 @@ mouseMoveEvent(QMouseEvent *event)
 				viewport()->setCursor(Qt::DragMoveCursor);
 			}
 		}
-	} else
-	if (_resize_event && (event->buttons() & Qt::LeftButton)) {
+	}
+	else if (_resize_event && (event->buttons() & Qt::LeftButton)) {
 		QPointF size = mapToScene(event->pos()) - _resize_event->node->mapToScene(0,0);
 		_resize_event->node->setSize(size);
 	}

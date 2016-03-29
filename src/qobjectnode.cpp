@@ -2,8 +2,8 @@
 #include <QMetaProperty>
 #include <QWidget>
 
-qObjectnode::
-qObjectnode(QObject *data, QGraphicsItem *parent) : GraphicsNode(parent)
+QObjectnode::
+QObjectnode(QObject *data, QGraphicsItem *parent) : GraphicsNode(parent)
 {
 	m_data=data;
 	if(m_data==0)
