@@ -58,14 +58,14 @@ public:
 		return GraphicsNodeItemTypes::TypeBezierEdge;
 	}
 
-public slots:
+public Q_SLOTS:
 	void sinkDisconnected(GraphicsNode *node, GraphicsNodeSocket *sink);
 	void sourceDisconnected(GraphicsNode *node, GraphicsNodeSocket *source);
 
 protected:
 	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
-protected slots:
+protected Q_SLOTS:
 	void onSourceDataChange(); // cant use QVariant argument, since it might be another type
 
 protected:
