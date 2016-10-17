@@ -16,13 +16,16 @@ class QGraphicsSceneMouseEvent;
 class QGraphicsSceneDragDropEvent;
 class GraphicsDirectedEdge;
 
+class GraphicsNode;
+
 
 /**
  * visual representation of a socket. the visual representation consists of a
  * circle for User Interaction and a label
  */
-class GraphicsNodeSocket : public QGraphicsItem
+class GraphicsNodeSocket : public QObject, public QGraphicsItem
 {
+    Q_OBJECT
 	friend class GraphicsDirectedEdge;
 public:
 	/*
@@ -36,8 +39,8 @@ public:
 	};
 
 
-	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, QGraphicsItem *parent = nullptr);
-	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent = nullptr,QObject *data=0,int index=0);
+	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, GraphicsNode *parent = nullptr);
+	GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, GraphicsNode *parent = nullptr,QObject *data=0,int index=0);
 
 	virtual QRectF boundingRect() const override;
 
@@ -89,7 +92,8 @@ public:
 	// is living in
 	QPointF sceneAnchorPos() const;
 
-
+        GraphicsNode *source() const;
+        GraphicsNode *sink() const;
 
 protected:
 	// event handling
@@ -107,6 +111,7 @@ private:
 	const QPen _pen_text;
 	const QBrush _brush_circle;
 	const QString _text;
+	GraphicsNode *_node;
 
 	/*
 	 * edge with which this socket is connected
@@ -123,6 +128,9 @@ private:// some constants. TODO: need to be defined somewhere else (customizable
 
 	const qreal _min_width = 30;
 	const qreal _min_height = 12.0;
+
+Q_SIGNALS:
+    void connectedTo(GraphicsNodeSocket* other);
 };
 
 #endif /* __GRAPHICSNODESOCKET_HPP__99275D3E_35A8_4D63_8E10_995E5DC83C8C */

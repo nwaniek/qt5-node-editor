@@ -16,6 +16,8 @@
 
 #include "graphicsbezieredge.hpp"
 
+#include "graphicsnode.hpp"
+
 // TODO:
 // * prepareGeometryChange
 
@@ -31,13 +33,13 @@
 
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(GraphicsNodeSocketType type, QGraphicsItem *parent)
+GraphicsNodeSocket(GraphicsNodeSocketType type, GraphicsNode *parent)
 : GraphicsNodeSocket(type, "", parent)
 { }
 
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGraphicsItem *parent, QObject *data,int index)
+GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index)
 : QGraphicsItem(parent)
 , _socket_type(socket_type)
 , _pen_circle(PEN_COLOR_CIRCLE)
@@ -45,6 +47,7 @@ GraphicsNodeSocket(GraphicsNodeSocketType socket_type, const QString &text, QGra
 , _brush_circle((socket_type == SINK) ? BRUSH_COLOR_SINK : BRUSH_COLOR_SOURCE)
 , _text(text)
 , _edge(nullptr)
+, _node(parent)
 ,m_data(data),m_index(index)
 {
 	_pen_circle.setWidth(0);
@@ -191,6 +194,18 @@ set_edge(GraphicsDirectedEdge *edge)
 {
 	// TODO: handle edge conflict
 	_edge = edge;
+
+        if (_edge) {
+            switch (_socket_type) {
+            case SINK:
+                    Q_EMIT connectedTo(_edge->source());
+                    break;
+            case SOURCE:
+                    Q_EMIT connectedTo(_edge->sink());
+                    break;
+            }
+	}
+
 	notifyPositionChange();
 }
 
@@ -216,5 +231,21 @@ GraphicsDirectedEdge* GraphicsNodeSocket::
 get_edge()
 {
 	return _edge;
+}
+
+GraphicsNode *GraphicsNodeSocket::
+source() const
+{
+	if ((!_edge) || (!_edge->source())) return nullptr;
+
+	return _edge->source()->_node;
+}
+
+GraphicsNode *GraphicsNodeSocket::
+sink() const
+{
+	if ((!_edge) || (!_edge->sink())) return nullptr;
+
+	return _edge->sink()->_node;
 }
 
