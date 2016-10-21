@@ -199,7 +199,7 @@ itemChange(GraphicsItemChange change, const QVariant &value)
 }
 
 
-const GraphicsNodeSocket* GraphicsNode::
+GraphicsNodeSocket* GraphicsNode::
 add_sink(const QString &text,QObject *data,int id)
 {
 	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SINK, text, this,data,id);
@@ -211,7 +211,7 @@ add_sink(const QString &text,QObject *data,int id)
 }
 
 
-const GraphicsNodeSocket* GraphicsNode::
+GraphicsNodeSocket* GraphicsNode::
 add_source(const QString &text,QObject *data,int id)
 {
 	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SOURCE, text, this,data,id);
@@ -222,6 +222,25 @@ add_source(const QString &text,QObject *data,int id)
 	return s;
 }
 
+
+void GraphicsNode::
+clear_sink()
+{
+	_sinks.clear();
+	_changed = true;
+	prepareGeometryChange();
+	updateGeometry();
+}
+
+
+void GraphicsNode::
+clear_source()
+{
+	_sources.clear();
+	_changed = true;
+	prepareGeometryChange();
+	updateGeometry();
+}
 
 void GraphicsNode::
 connect_source(int i, GraphicsDirectedEdge *edge)
