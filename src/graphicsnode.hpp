@@ -26,8 +26,9 @@ class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
 
 
-class GraphicsNode : public QGraphicsItem
+class GraphicsNode : public QObject, public QGraphicsItem
 {
+    Q_OBJECT
 public:
 	GraphicsNode(QGraphicsItem *parent = nullptr);
 	virtual ~GraphicsNode();

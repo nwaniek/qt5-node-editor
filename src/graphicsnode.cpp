@@ -22,7 +22,7 @@
 
 
 GraphicsNode::GraphicsNode(QGraphicsItem *parent)
-: QGraphicsItem(parent)
+: QObject(nullptr), QGraphicsItem(parent)
 , _changed(false)
 , _width(150)
 , _height(120)
