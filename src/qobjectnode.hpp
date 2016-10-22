@@ -5,19 +5,7 @@
 
 class QObjectnodePrivate;
 
-class PropertyConnection final : public QObject //TODO make private
-{
-	Q_OBJECT
-public:
-	explicit PropertyConnection(QObject* parent);
-	~PropertyConnection();
 
-	const QMetaObject* _source_mo;
-	QMetaObject::Connection _conn;
-	int _prop_id;
-	QObjectnodePrivate* d_ptr;
-};
-Q_DECLARE_METATYPE(PropertyConnection*)
 
 
 class QObjectnode : public GraphicsNode

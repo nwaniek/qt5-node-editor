@@ -3,28 +3,9 @@
 #include <QWidget>
 
 #include "graphicsnodesocket.hpp"
+#include "connectmapper_p.hpp"
 
-class QObjectnodePrivate : public QObject
-{
-public:
-	QObject* _data;
-	QHash<int, QMetaObject::Connection> _source_connections;
-	QHash<int, QMetaObject::Connection> _sink_connections;
-
-public Q_SLOTS:
-	void slotConnected(GraphicsNodeSocket* other);
-};
-
-
-PropertyConnection::PropertyConnection(QObject* parent) : QObject(parent)
-{
-
-}
-
-PropertyConnection::~PropertyConnection()
-{
-	QObject::disconnect(_conn);
-}
+#include <QtCore/QAbstractItemModel>
 
 QObjectnode::
 QObjectnode(QObject *data, QGraphicsItem *parent) : GraphicsNode(parent),
@@ -50,7 +31,7 @@ QObjectnode(QObject *data, QGraphicsItem *parent) : GraphicsNode(parent),
 			{
 				GraphicsNodeSocket* node = add_source(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",data,property_count);
 
-                                PropertyConnection* conn = new PropertyConnection(data);
+                                PropertyConnection* conn = new PropertyConnection(data, PropertyConnection::Mode::OBJECT);
                                 conn->_prop_id  = property_count;
                                 conn->_source_mo = m;
                                 conn->d_ptr = d_ptr;
@@ -60,7 +41,7 @@ QObjectnode(QObject *data, QGraphicsItem *parent) : GraphicsNode(parent),
 			if(prop.isWritable()) {
 				GraphicsNodeSocket* node = add_sink(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",data,property_count);
 
-                                PropertyConnection* conn = new PropertyConnection(data);
+                                PropertyConnection* conn = new PropertyConnection(data, PropertyConnection::Mode::OBJECT);
                                 conn->_prop_id  = property_count;
                                 conn->_source_mo = m;
                                 conn->d_ptr = d_ptr;
@@ -84,17 +65,31 @@ slotConnected(GraphicsNodeSocket* source_node)
 
 		// Connect 2 QObjectnode
 		if (srcMO && sinkMO) {
-		const QMetaProperty sinkProp = sinkMO->_source_mo->property(sinkMO->_prop_id);
-		const QMetaProperty sourceProp = srcMO->_source_mo->property(srcMO->_prop_id);
+			const QMetaProperty sinkProp = sinkMO->_source_mo->property(sinkMO->_prop_id);
+			const QByteArray sinkName   = sinkProp.name();
 
-		const QByteArray sinkName   = sinkProp.name();
-		const QByteArray sourceName = sourceProp.name();
+			// Set the target node property to the source current value
+			switch(srcMO->_mode) {
+				case PropertyConnection::Mode::OBJECT: {
+					const QMetaProperty sourceProp = srcMO->_source_mo->property(srcMO->_prop_id);
 
-		// Set the target node property to the source current value
-		sinkMO->d_ptr->_data->setProperty(
-			sinkName,
-			srcMO->d_ptr->_data->property(sourceName)
-		);
+					const QByteArray sourceName = sourceProp.name();
+
+					sinkMO->d_ptr->_data->setProperty(
+						sinkName,
+						srcMO->d_ptr->_data->property(sourceName)
+					);
+				}
+					break;
+				case PropertyConnection::Mode::MODEL: {
+					const auto idx = srcMO->d_ptr2->_model->index(sinkMO->_prop_id, 0);
+					sinkMO->d_ptr->_data->setProperty(
+						sinkName,
+						idx.data(srcMO->d_ptr2->m_ObjectRole)
+					);
+				}
+					break;
+			}
 		//TODO connect to the signal
 		}
 	}
