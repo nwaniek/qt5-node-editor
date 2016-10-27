@@ -9,7 +9,6 @@
 #include <QGraphicsDropShadowEffect>
 #include <iostream>
 #include <QMetaProperty>
-#include <QDebug>
 
 #include "graphicsnode.hpp"
 #include "graphicsnodesocket.hpp"
@@ -203,6 +202,7 @@ disconnect_source()
 }
 
 
+#include <QDebug>
 void GraphicsDirectedEdge::
 connect_sink(GraphicsNodeSocket *sink)
 {
@@ -245,12 +245,16 @@ connect_source(GraphicsNodeSocket *source)
 void GraphicsDirectedEdge::
 sinkDisconnected(GraphicsNode *node, GraphicsNodeSocket *sink)
 {
+    Q_UNUSED(node)
+    Q_UNUSED(sink)
 }
 
 
 void GraphicsDirectedEdge::
 sourceDisconnected(GraphicsNode *node, GraphicsNodeSocket *source)
 {
+    Q_UNUSED(node)
+    Q_UNUSED(source)
 }
 
 

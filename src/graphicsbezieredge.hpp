@@ -52,6 +52,9 @@ public:
 	void set_start(QPointF p);
 	void set_stop(QPointF p);
 
+    GraphicsNodeSocket *source() const {return  _source;}
+	GraphicsNodeSocket *sink() const {return _sink;}
+
 	// virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
 
 	int type() const override {
