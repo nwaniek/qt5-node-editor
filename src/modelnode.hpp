@@ -15,13 +15,22 @@ public:
 	int idRole() const;
 	int titleRole() const;
 	int objectRole() const;
+	
+	int connectedObjectRole() const;
+	int connectedPropertyRole() const;
+	int connectedModelIndexRole() const;
+	QByteArray connectedProperty() const;
 
 	QString objectProperty() const;
-	
 	
 	void setIdRole(int role);
 	void setTitleRole(int role);
 	void setObjectRole(int role);
+	
+	void setConnectedObjectRole(int role);
+	void setConnectedPropertyRole(int role);
+	void setConnectedProperty(const QByteArray& a);
+	void setConnectedModelIndexRole(int role);
 
 	void setObjectProperty(QString &prop);
 

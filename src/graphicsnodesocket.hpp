@@ -57,6 +57,9 @@ public:
 
 	GraphicsDirectedEdge *get_edge();
 
+    QString text() const;
+    void setText(const QString& text);
+
 	/**
 	 * notify the socket that its position has changed. this may be either
 	 * due to movement within the parent, or due to movement of the parent
@@ -110,7 +113,7 @@ private:
 	QPen _pen_circle;
 	const QPen _pen_text;
 	const QBrush _brush_circle;
-	const QString _text;
+	QString _text;
 	GraphicsNode *_node;
 
 	/*

@@ -13,7 +13,7 @@ class Modelnode;
  * implementations
  */
 
-class QObjectnodePrivate : public QObject
+class QObjectnodePrivate final : public QObject
 {
 	Q_OBJECT
 public:
@@ -25,7 +25,7 @@ public Q_SLOTS:
 	void slotConnected(GraphicsNodeSocket* other);
 };
 
-class ModelnodePrivate : public QObject
+class ModelnodePrivate final : public QObject
 {
 	Q_OBJECT
 public:
@@ -36,6 +36,10 @@ public:
 	int m_IdRole {Qt::DisplayRole};
 	int m_TitleRole {Qt::DisplayRole};
 	int m_ObjectRole {Qt::UserRole};
+	int m_ConnectedObjectRole {-1}; // The role to call setData with
+	int m_ConnectedPropertyRole {-1}; // The SINK model role
+	QByteArray m_ConnectedProperty {}; // The SINK object property
+	int m_ConnectedModelIndexRole {-1};
 
 	QString m_ObjectProperty {QString()}; //The object itself
 	
@@ -46,6 +50,7 @@ public Q_SLOTS:
 	void slotRowsInserted(const QModelIndex &parent, int first, int last);
 	void slotRowsRemoved(const QModelIndex &parent, int first, int last);
 	void slotRowsMoved(const QModelIndex &parent, int first, int last);
+	void slotDataChanged(const QModelIndex &tl, const QModelIndex &br);
 	void slotReset();
 	void slotLayoutChanged();
 };

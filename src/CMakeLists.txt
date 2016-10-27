@@ -19,6 +19,9 @@ set(SRC
 	graphicsnodescene.cpp
 	graphicsnodesocket.cpp
         qobjectnode.cpp
+        modelnode.cpp
+
+	connectmapper_p.cpp
 )
 set(HEADERS
 	node.hpp
@@ -30,6 +33,7 @@ set(HEADERS
 	graphicsnodesocket.hpp
 	graphicsnodedefs.hpp
         qobjectnode.hpp
+        modelnode.hpp
 )
 
 add_library(qnodeeditor SHARED ${SRC} ${HEADERS_MOC} ${HEADERS})

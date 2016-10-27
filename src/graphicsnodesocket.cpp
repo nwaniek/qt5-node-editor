@@ -233,6 +233,19 @@ get_edge()
 	return _edge;
 }
 
+
+QString GraphicsNodeSocket::
+text() const
+{
+    return _text;
+}
+
+void GraphicsNodeSocket::
+setText(const QString& t)
+{
+    _text = t;
+}
+
 GraphicsNode *GraphicsNodeSocket::
 source() const
 {

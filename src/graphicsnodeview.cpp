@@ -103,11 +103,12 @@ middleMouseButtonRelease(QMouseEvent *event)
 	setDragMode(QGraphicsView::NoDrag);
 }
 
-
+#include <QDebug>
 void GraphicsNodeView::
 leftMouseButtonRelease(QMouseEvent *event)
 {
 	if (_drag_event) {
+            qDebug() << "IN RELEASE EVENT!!!!";
 		auto sock = socket_at(event->pos());
 		if (!sock || !can_accept_edge(sock)) {
 			scene()->removeItem(_drag_event->e);
@@ -117,11 +118,13 @@ leftMouseButtonRelease(QMouseEvent *event)
 			switch (_drag_event->mode) {
 			case EdgeDragEvent::move_to_source:
 			case EdgeDragEvent::connect_to_source:
+                                qDebug() << "DO IT";
 				_drag_event->e->connect_source(sock);
 				break;
 
 			case EdgeDragEvent::move_to_sink:
 			case EdgeDragEvent::connect_to_sink:
+                                qDebug() << "DO IT2";
 				_drag_event->e->connect_sink(sock);
 				break;
 			}
