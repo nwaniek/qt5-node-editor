@@ -113,7 +113,7 @@ leftMouseButtonRelease(QMouseEvent *event)
             qDebug() << "IN RELEASE EVENT!!!!";
 		auto sock = socket_at(event->pos());
 		if (!sock || !can_accept_edge(sock)) {
-			scene()->removeItem(_drag_event->e);
+			scene()->removeItem(_drag_event->e->graphicsItem());
 			_drag_event->e->d_ptr->disconnectBoth();
 			delete _drag_event->e;
 		} else {
@@ -270,7 +270,7 @@ leftMouseButtonPress(QMouseEvent *event)
 					_drag_event->e->d_ptr->setStop(mapToScene(event->pos()));
 					_drag_event->mode = EdgeDragEvent::connect_to_sink;
 				}
-				scene()->addItem(_drag_event->e);
+				scene()->addItem(_drag_event->e->graphicsItem());
 			}
 			event->ignore();
 		}

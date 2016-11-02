@@ -3,6 +3,8 @@
 
 #include <QGraphicsDropShadowEffect>
 
+class GraphicsEdgeItem;
+
 class GraphicsDirectedEdgePrivate final
 {
 public:
@@ -15,6 +17,8 @@ public:
     QPoint _start;
     QPoint _stop;
     qreal _factor;
+
+    GraphicsEdgeItem *m_pGrpahicsItem {nullptr};
 
     GraphicsDirectedEdge* q_ptr;
 
