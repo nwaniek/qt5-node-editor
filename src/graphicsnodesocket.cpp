@@ -21,6 +21,8 @@
 #define TEXT_ALIGNMENT_SINK   Qt::AlignLeft
 #define TEXT_ALIGNMENT_SOURCE Qt::AlignRight
 
+#include "graphicsbezieredge_p.h"
+
 GraphicsNodeSocket::
 GraphicsNodeSocket(SocketType type, GraphicsNode *parent)
 : GraphicsNodeSocket(type, QString(), parent)
@@ -237,10 +239,10 @@ notifyPositionChange()
 
     switch (d_ptr->_socket_type) {
     case SocketType::SINK:
-        d_ptr->_edge->set_stop(mapToScene(0,0));
+        d_ptr->_edge->d_ptr->setStop(mapToScene(0,0));
         break;
     case SocketType::SOURCE:
-        d_ptr->_edge->set_start(mapToScene(0,0));
+        d_ptr->_edge->d_ptr->setStart(mapToScene(0,0));
         break;
     }
 }

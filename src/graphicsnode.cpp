@@ -303,9 +303,6 @@ connectSource(int i, GraphicsDirectedEdge *edge)
 {
     const auto old_edge = d_ptr->_sources[i]->edge();
     d_ptr->_sources[i]->setEdge(edge);
-
-    if (old_edge)
-        old_edge->sourceDisconnected(this, d_ptr->_sources[i]);
 }
 
 
@@ -314,9 +311,6 @@ connectSink(int i, GraphicsDirectedEdge *edge)
 {
     const auto old_edge = d_ptr->_sinks[i]->edge();
     d_ptr->_sinks[i]->setEdge(edge);
-
-    if (old_edge)
-        old_edge->sinkDisconnected(this, d_ptr->_sinks[i]);
 }
 
 

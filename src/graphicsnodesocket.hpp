@@ -28,6 +28,7 @@ class GraphicsNodeSocket : public QObject, public QGraphicsItem
 {
     Q_OBJECT
     friend class GraphicsDirectedEdge;
+    friend class GraphicsDirectedEdgePrivate;
 public:
     /*
     * the socket comes in two flavors: either as sink or as source for a
@@ -84,7 +85,7 @@ public:
     * type of the class. usefull within a QGraphicsScene to distinguish
     * what is really behind a pointer
     */
-    int type() const override;
+    virtual int type() const override;
 
     /**
     * determine if a point is actually within the socket circle.
