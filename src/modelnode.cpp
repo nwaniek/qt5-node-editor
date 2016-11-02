@@ -128,7 +128,7 @@ slotRowsInserted(const QModelIndex &parent, int first, int last)
 	for (int i = first; i <= last; i++) {
 		const QModelIndex idx = _model->index(i, 0);
 		
-		GraphicsNodeSocket* node = q_ptr->add_source(
+		GraphicsNodeSocket* node = q_ptr->addSource(
 			idx.data().toString(), _model, i
 		);
 
@@ -164,7 +164,7 @@ slotDataChanged(const QModelIndex &tl, const QModelIndex &br)
 {
 	// Update the names
 	for (int i=tl.row(); i <= br.row(); i++) {
-		auto s = q_ptr->get_source_socket(i);
+		auto s = q_ptr->getSourceSocket(i);
 		s->setText(tl.model()->index(i,0).data(m_TitleRole).toString());
 	}
 // 	GraphicsNodeSocket* q_ptr->get_sink_socket(const size_t id);

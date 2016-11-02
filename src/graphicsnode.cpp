@@ -20,46 +20,94 @@
 #include "graphicsbezieredge.hpp"
 #include "graphicsnodesocket.hpp"
 
+#if QT_VERSION < 0x050700
+//Q_FOREACH is deprecated and Qt CoW containers are detached on C++11 for loops
+template<typename T>
+const T& qAsConst(const T& v)
+{
+    return const_cast<const T&>(v);
+}
+#endif
+
+class GraphicsNodePrivate final
+{
+public:
+    explicit GraphicsNodePrivate(GraphicsNode* q) : q_ptr(q) {}
+
+    // TODO: change pairs of sizes to QPointF, QSizeF, or quadrupels to QRectF
+
+    constexpr static const qreal _hard_min_width  = 150.0;
+    constexpr static const qreal _hard_min_height = 120.0;
+
+    QSizeF m_MinSize {150.0, 120.0};
+
+    constexpr static const qreal _top_margin    = 30.0;
+    constexpr static const qreal _bottom_margin = 15.0;
+    constexpr static const qreal _item_padding  = 5.0;
+    constexpr static const qreal _lr_padding    = 10.0;
+
+    constexpr static const qreal _pen_width = 1.0;
+    constexpr static const qreal _socket_size = 6.0;
+
+    bool _changed {false};
+
+    QSizeF m_Size {150, 120};
+
+    QPen _pen_default  {QColor("#7F000000")};
+    QPen _pen_selected {QColor("#FFFF36A7")};
+    QPen _pen_sources  {QColor("#FF000000")};
+    QPen _pen_sinks    {QColor("#FF000000")};
+
+    QBrush _brush_title      {QColor("#E3212121")};
+    QBrush _brush_background {QColor("#E31a1a1a")};
+    QBrush m_brushSources    {QColor("#FFFF7700")};
+    QBrush m_brushSinks      {QColor("#FF0077FF")};
+
+    //TODO lazy load, add option to disable, its nice, but sllooowwww
+    QGraphicsDropShadowEffect *_effect        {new QGraphicsDropShadowEffect()};
+    QGraphicsTextItem         *_title_item    {nullptr};
+    QGraphicsProxyWidget      *_central_proxy {nullptr};
+
+    QString _title;
+
+    QVector<GraphicsNodeSocket*> _sources;
+    QVector<GraphicsNodeSocket*> _sinks;
+
+    // Helpers
+    void updateGeometry();
+    void updateSizeHints();
+    void propagateChanges();
+
+    GraphicsNode* q_ptr;
+};
+
+// Necessary for some compilers...
+constexpr const qreal GraphicsNodePrivate::_hard_min_width;
+constexpr const qreal GraphicsNodePrivate::_hard_min_height;
+
 
 GraphicsNode::GraphicsNode(QGraphicsItem *parent)
-: QObject(nullptr), QGraphicsItem(parent)
-, _changed(false)
-, _width(150)
-, _height(120)
-, _pen_default(QColor("#7F000000"))
-, _pen_selected(QColor("#FFFF36A7"))
-// , _pen_selected(QColor("#FFFFA836"))
-// , _pen_selected(QColor("#FF00FF27"))
-, _pen_sources(QColor("#FF000000"))
-, _pen_sinks(QColor("#FF000000"))
-, _brush_title(QColor("#E3212121"))
-, _brush_background(QColor("#E31a1a1a"))
-, _brush_sources(QColor("#FFFF7700"))
-, _brush_sinks(QColor("#FF0077FF"))
-, _effect(new QGraphicsDropShadowEffect())
-, _title_item(new QGraphicsTextItem(this))
+: QObject(nullptr), QGraphicsItem(parent), d_ptr(new GraphicsNodePrivate(this))
 {
-	for (auto p : {&_pen_default, &_pen_selected, &_pen_default, &_pen_selected}) {
-		p->setWidth(0);
-	}
+    d_ptr->_title_item = new QGraphicsTextItem(this);
 
-	setFlag(QGraphicsItem::ItemIsMovable);
-	setFlag(QGraphicsItem::ItemIsSelectable);
-	setFlag(QGraphicsItem::ItemSendsGeometryChanges);
+    for (auto p : {
+      &d_ptr->_pen_default, &d_ptr->_pen_selected,
+      &d_ptr->_pen_default, &d_ptr->_pen_selected
+    })
+        p->setWidth(0);
 
-	_title_item->setDefaultTextColor(Qt::white);
-	_title_item->setPos(0, 0);
-	_title_item->setTextWidth(_width - 2*_lr_padding);
-	// alignment?
-	/*
-	auto opts = q->document()->defaultTextOption();
-	opts.setAlignment(Qt::AlignRight);
-	q->document()->setDefaultTextOption(opts);
-	*/
+    setFlag(QGraphicsItem::ItemIsMovable);
+    setFlag(QGraphicsItem::ItemIsSelectable);
+    setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
-	_effect->setBlurRadius(13.0);
-	_effect->setColor(QColor("#99121212"));
-	setGraphicsEffect(_effect);
+    d_ptr->_title_item->setDefaultTextColor(Qt::white);
+    d_ptr->_title_item->setPos(0, 0);
+    d_ptr->_title_item->setTextWidth(d_ptr->m_Size.width() - 2*d_ptr->_lr_padding);
+
+    d_ptr->_effect->setBlurRadius(13.0);
+    d_ptr->_effect->setColor(QColor("#99121212"));
+    setGraphicsEffect(d_ptr->_effect);
 
 }
 
@@ -67,73 +115,87 @@ GraphicsNode::GraphicsNode(QGraphicsItem *parent)
 void GraphicsNode::
 setTitle(const QString &title)
 {
-	_title = title;
-	_title_item->setPlainText(title);
+    d_ptr->_title = title;
+    d_ptr->_title_item->setPlainText(title);
 }
 
+int GraphicsNode::
+type() const
+{
+    return GraphicsNodeItemTypes::TypeNode;
+}
+
+QSizeF GraphicsNode::
+size() const
+{
+    return d_ptr->m_Size;
+}
 
 GraphicsNode::
 ~GraphicsNode()
 {
-	if (_central_proxy) delete _central_proxy;
-	delete _title_item;
-	delete _effect;
+    if (d_ptr->_central_proxy) delete d_ptr->_central_proxy;
+    delete d_ptr->_title_item;
+    delete d_ptr->_effect;
+    delete d_ptr;
 }
 
 
 QRectF GraphicsNode::
 boundingRect() const
 {
-	return QRectF(-_pen_width/2.0 - _socket_size,
-			-_pen_width/2.0,
-			_width + _pen_width/2.0 + 2.0 * _socket_size,
-			_height + _pen_width/2.0).normalized();
+    return QRectF(
+        -d_ptr->_pen_width/2.0 - d_ptr->_socket_size,
+        -d_ptr->_pen_width/2.0,
+        d_ptr->m_Size.width()  + d_ptr->_pen_width/2.0 + 2.0 * d_ptr->_socket_size,
+        d_ptr->m_Size.height() + d_ptr->_pen_width/2.0
+    ).normalized();
 }
 
 
 void GraphicsNode::
 paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
-	const qreal edge_size = 10.0;
-	const qreal title_height = 20.0;
+    const qreal edge_size = 10.0;
+    const qreal title_height = 20.0;
 
-	// path for the caption of this node
-	QPainterPath path_title;
-	path_title.setFillRule(Qt::WindingFill);
-	path_title.addRoundedRect(QRect(0, 0, _width, title_height), edge_size, edge_size);
-	path_title.addRect(0, title_height - edge_size, edge_size, edge_size);
-	path_title.addRect(_width - edge_size, title_height - edge_size, edge_size, edge_size);
-	painter->setPen(Qt::NoPen);
-	painter->setBrush(_brush_title);
-	painter->drawPath(path_title.simplified());
+    // path for the caption of this node
+    QPainterPath path_title;
+    path_title.setFillRule(Qt::WindingFill);
+    path_title.addRoundedRect(QRect(0, 0, d_ptr->m_Size.width(), title_height), edge_size, edge_size);
+    path_title.addRect(0, title_height - edge_size, edge_size, edge_size);
+    path_title.addRect(d_ptr->m_Size.width() - edge_size, title_height - edge_size, edge_size, edge_size);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(d_ptr->_brush_title);
+    painter->drawPath(path_title.simplified());
 
-	// path for the content of this node
-	QPainterPath path_content;
-	path_content.setFillRule(Qt::WindingFill);
-	path_content.addRoundedRect(QRect(0, title_height, _width, _height - title_height), edge_size, edge_size);
-	path_content.addRect(0, title_height, edge_size, edge_size);
-	path_content.addRect(_width - edge_size, title_height, edge_size, edge_size);
-	painter->setPen(Qt::NoPen);
-	painter->setBrush(_brush_background);
-	painter->drawPath(path_content.simplified());
+    // path for the content of this node
+    QPainterPath path_content;
+    path_content.setFillRule(Qt::WindingFill);
+    path_content.addRoundedRect(QRect(0, title_height, d_ptr->m_Size.width(), d_ptr->m_Size.height() - title_height), edge_size, edge_size);
+    path_content.addRect(0, title_height, edge_size, edge_size);
+    path_content.addRect(d_ptr->m_Size.width() - edge_size, title_height, edge_size, edge_size);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(d_ptr->_brush_background);
+    painter->drawPath(path_content.simplified());
 
-	// path for the outline
-	QPainterPath path_outline = QPainterPath();
-	path_outline.addRoundedRect(QRect(0, 0, _width, _height), edge_size, edge_size);
-	painter->setPen(isSelected() ? _pen_selected : _pen_default);
-	painter->setBrush(Qt::NoBrush);
-	painter->drawPath(path_outline.simplified());
+    // path for the outline
+    QPainterPath path_outline = QPainterPath();
+    path_outline.addRoundedRect(QRect(0, 0, d_ptr->m_Size.width(), d_ptr->m_Size.height()), edge_size, edge_size);
+    painter->setPen(isSelected() ? d_ptr->_pen_selected : d_ptr->_pen_default);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawPath(path_outline.simplified());
 
-	// debug bounding box
+    // debug bounding box
 #if 0
-	QPen debugPen = QPen(QColor(Qt::red));
-	debugPen.setWidth(0);
-	auto r = boundingRect();
-	painter->setPen(debugPen);
-	painter->setBrush(Qt::NoBrush);
-	painter->drawRect(r);
+    QPen debugPen = QPen(QColor(Qt::red));
+    debugPen.setWidth(0);
+    auto r = boundingRect();
+    painter->setPen(debugPen);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawRect(r);
 
-	painter->drawPoint(0,0);
+    painter->drawPoint(0,0);
 #endif
 }
 
@@ -141,263 +203,276 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 void GraphicsNode::
 mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-	// TODO: ordering after selection/deselection cycle
-	QGraphicsItem::mousePressEvent(event);
-	if (isSelected())
-		setZValue(1);
-	else
-		setZValue(0);
+    // TODO: ordering after selection/deselection cycle
+    QGraphicsItem::mousePressEvent(event);
+
+    setZValue(isSelected() ? 1 : 0);
 }
 
 
 void GraphicsNode::
 setSize(const qreal width, const qreal height)
 {
-	setSize(QPointF(width, height));
+    setSize(QPointF(width, height));
 }
 
 
 void GraphicsNode::
 setSize(const QPointF size)
 {
-	setSize(QSizeF(size.x(), size.y()));
+    setSize(QSizeF(size.x(), size.y()));
 }
 
 
 void GraphicsNode::
 setSize(const QSizeF size)
 {
-	_width = size.width();
-	_height = size.height();
-	_changed = true;
-	prepareGeometryChange();
-	updateGeometry();
+    d_ptr->m_Size = size;
+    d_ptr->_changed = true;
+    prepareGeometryChange();
+    d_ptr->updateGeometry();
 }
 
 
 QVariant GraphicsNode::
 itemChange(GraphicsItemChange change, const QVariant &value)
 {
-	switch (change) {
-	case QGraphicsItem::ItemSelectedChange: {
-		if (value == true)
-			setZValue(1);
-		else
-			setZValue(0);
-		break;
-	}
-	case QGraphicsItem::ItemPositionChange:
-	case QGraphicsItem::ItemPositionHasChanged:
-		propagateChanges();
-		break;
+    switch (change) {
+    case QGraphicsItem::ItemSelectedChange: {
+        if (value == true)
+            setZValue(1);
+        else
+            setZValue(0);
+        break;
+    }
+    case QGraphicsItem::ItemPositionChange:
+    case QGraphicsItem::ItemPositionHasChanged:
+        d_ptr->propagateChanges();
+        break;
 
-	default:
-		break;
-	}
+    default:
+        break;
+    }
 
-	return QGraphicsItem::itemChange(change, value);
+    return QGraphicsItem::itemChange(change, value);
 }
 
 
 GraphicsNodeSocket* GraphicsNode::
-add_sink(const QString &text,QObject *data,int id)
+addSink(const QString &text,QObject *data,int id)
 {
-	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SINK, text, this,data,id);
-	_sinks.push_back(s);
-	_changed = true;
-	prepareGeometryChange();
-	updateGeometry();
-	return s;
+    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SINK, text, this,data,id);
+    d_ptr->_sinks.push_back(s);
+    d_ptr->_changed = true;
+    prepareGeometryChange();
+    d_ptr->updateGeometry();
+
+    return s;
 }
 
 
 GraphicsNodeSocket* GraphicsNode::
-add_source(const QString &text,QObject *data,int id)
+addSource(const QString &text,QObject *data,int id)
 {
-	auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SOURCE, text, this,data,id);
-	_sources.push_back(s);
-	_changed = true;
-	prepareGeometryChange();
-	updateGeometry();
-	return s;
+    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SOURCE, text, this,data,id);
+    d_ptr->_sources.push_back(s);
+    d_ptr->_changed = true;
+    prepareGeometryChange();
+    d_ptr->updateGeometry();
+
+    return s;
 }
 
 
 void GraphicsNode::
-clear_sink()
+clearSink()
 {
-	_sinks.clear();
-	_changed = true;
-	prepareGeometryChange();
-	updateGeometry();
+    d_ptr->_sinks.clear();
+    d_ptr->_changed = true;
+    prepareGeometryChange();
+    d_ptr->updateGeometry();
 }
 
 
 void GraphicsNode::
-clear_source()
+clearSource()
 {
-	_sources.clear();
-	_changed = true;
-	prepareGeometryChange();
-	updateGeometry();
+    d_ptr->_sources.clear();
+    d_ptr->_changed = true;
+    prepareGeometryChange();
+    d_ptr->updateGeometry();
 }
 
 void GraphicsNode::
-connect_source(int i, GraphicsDirectedEdge *edge)
+connectSource(int i, GraphicsDirectedEdge *edge)
 {
-	auto old_edge = _sources[i]->get_edge();
-	_sources[i]->set_edge(edge);
-	if (old_edge) old_edge->sourceDisconnected(this, _sources[i]);
-}
+    const auto old_edge = d_ptr->_sources[i]->get_edge();
+    d_ptr->_sources[i]->set_edge(edge);
 
-
-void GraphicsNode::
-connect_sink(int i, GraphicsDirectedEdge *edge)
-{
-	auto old_edge = _sinks[i]->get_edge();
-	_sinks[i]->set_edge(edge);
-	if (old_edge) old_edge->sinkDisconnected(this, _sinks[i]);
+    if (old_edge)
+        old_edge->sourceDisconnected(this, d_ptr->_sources[i]);
 }
 
 
 void GraphicsNode::
+connectSink(int i, GraphicsDirectedEdge *edge)
+{
+    const auto old_edge = d_ptr->_sinks[i]->get_edge();
+    d_ptr->_sinks[i]->set_edge(edge);
+
+    if (old_edge)
+        old_edge->sinkDisconnected(this, d_ptr->_sinks[i]);
+}
+
+
+void GraphicsNodePrivate::
 updateGeometry()
 {
-	if (!_changed) return;
+    if (!_changed) return;
 
-	// compute if we have reached the minimum size
-	updateSizeHints();
-	_width = std::max(_min_width, _width);
-	_height = std::max(_min_height, _height);
+    // compute if we have reached the minimum size
+    updateSizeHints();
 
-	// title
-	_title_item->setTextWidth(_width);
+    m_Size = {
+        std::max(m_MinSize.width() , m_Size.width()  ),
+        std::max(m_MinSize.height(), m_Size.height() )
+    };
 
-	qreal ypos1 = _top_margin;
-	for (size_t i = 0; i < _sinks.size(); i++) {
-		auto s = _sinks[i];
-		auto size = s->getSize();
+    // title
+    _title_item->setTextWidth(m_Size.width());
 
-		// sockets are centered around 0/0
-		s->setPos(0, ypos1 + size.height()/2.0);
-		ypos1 += size.height() + _item_padding;
-	}
+    qreal ypos1 = _top_margin;
 
-	// sources are placed bottom/right
-	qreal ypos2 = _height - _bottom_margin;
-	for (size_t i = _sources.size(); i > 0; i--) {
-		auto s = _sources[i-1];
-		auto size = s->getSize();
+    for (auto s : qAsConst(_sinks)) {
+        auto size = s->getSize();
 
-		ypos2 -= size.height();
-		s->setPos(_width, ypos2 + size.height()/2.0);
-		ypos2 -= _item_padding;
-	}
+        // sockets are centered around 0/0
+        s->setPos(0, ypos1 + size.height()/2.0);
+        ypos1 += size.height() + _item_padding;
+    }
+
+    // sources are placed bottom/right
+    qreal ypos2 = m_Size.height() - _bottom_margin;
+
+    for (int i = _sources.size(); i > 0; i--) {
+        auto s = _sources[i-1];
+        auto size = s->getSize();
+
+        ypos2 -= size.height();
+        s->setPos(m_Size.width(), ypos2 + size.height()/2.0);
+        ypos2 -= _item_padding;
+    }
 
 
-	// central widget
-	if (_central_proxy != nullptr) {
-		QRectF geom(_lr_padding, ypos1, _width - 2.0 * _lr_padding, ypos2 - ypos1);
-		_central_proxy->setGeometry(geom);
-	}
+    // central widget
+    if (_central_proxy) {
+        QRectF geom {
+            _lr_padding,
+            ypos1,
+            m_Size.width() - 2.0 * _lr_padding,
+            ypos2 - ypos1
+        };
 
-	_changed = false;
-	propagateChanges();
+        _central_proxy->setGeometry(geom);
+    }
+
+    _changed = false;
+    propagateChanges();
 }
 
 
 GraphicsNodeSocket* GraphicsNode::
-get_source_socket(const size_t id)
+getSourceSocket(const size_t id) const
 {
-	if (id < _sources.size())
-		return _sources[id];
-	else
-		return nullptr;
+    return (id < d_ptr->_sources.size()) ?
+        d_ptr->_sources[id] :
+        nullptr;
 }
 
 GraphicsNodeSocket* GraphicsNode::
-get_sink_socket(const size_t id)
+getSinkSocket(const size_t id) const
 {
-	if (id < _sinks.size())
-		return _sinks[id];
-	else
-		return nullptr;
+    return (id < d_ptr->_sinks.size()) ?
+        d_ptr->_sinks[id] :
+        nullptr;
 }
 
 
 void GraphicsNode::
 setCentralWidget (QWidget *widget)
 {
-	if (_central_proxy)
-		delete _central_proxy;
-	_central_proxy = new QGraphicsProxyWidget(this);
-	_central_proxy->setWidget(widget);
-	_changed = true;
-	prepareGeometryChange();
-	updateGeometry();
+    if (d_ptr->_central_proxy)
+        delete d_ptr->_central_proxy;
+
+    d_ptr->_central_proxy = new QGraphicsProxyWidget(this);
+    d_ptr->_central_proxy->setWidget(widget);
+    d_ptr->_changed = true;
+    prepareGeometryChange();
+    d_ptr->updateGeometry();
 }
 
 
-void GraphicsNode::
+void GraphicsNodePrivate::
 updateSizeHints() {
-	qreal min_width = 0.0;// _hard_min_width;
-	qreal min_height = _top_margin + _bottom_margin; // _hard_min_height;
+    qreal min_width(0.0), min_height(_top_margin + _bottom_margin);
 
-	// sinks
-	for (size_t i = 0; i < _sinks.size(); i++) {
-		auto s = _sinks[i];
-		auto size = s->getMinimalSize();
+    // sinks
+    for (auto s : qAsConst(_sinks)) {
+        auto size = s->getMinimalSize();
 
-		min_height += size.height() + _item_padding;
-		min_width = std::max(size.width(), min_width);
-	}
+        min_height += size.height() + _item_padding;
+        min_width   = std::max(size.width(), min_width);
+    }
 
-	// central widget
-	if (_central_proxy != nullptr) {
-		auto wgt = _central_proxy->widget();
-		if (wgt) {
-			// only take the size hint if the value is valid, and if
-			// the minimumSize is not set (similar to
-			// QWidget/QLayout standard behavior
-			auto sh = wgt->minimumSizeHint();
-			auto sz = wgt->minimumSize();
-			if (sh.isValid()) {
-				if (sz.height() > 0)
-					min_height += sz.height();
-				else
-					min_height += sh.height();
+    // central widget
+    if (_central_proxy) {
+        if (const auto wgt = _central_proxy->widget()) {
+            // only take the size hint if the value is valid, and if
+            // the minimumSize is not set (similar to
+            // QWidget/QLayout standard behavior
+            const auto sh = wgt->minimumSizeHint();
+            const auto sz = wgt->minimumSize();
 
-				if (sz.width() > 0)
-					min_width = std::max(qreal(sz.width()) + 2.0*_lr_padding, min_width);
-				else
-					min_width = std::max(qreal(sh.width()) + 2.0*_lr_padding, min_width);
-			} else {
-				min_height += sh.height();
-				min_width = std::max(qreal(sh.width()) + 2.0*_lr_padding, min_width);
-			}
-		}
-	}
+            if (sh.isValid()) {
+                min_height += (sz.height() > 0) ? sz.height() : sh.height();
 
-	// sources
-	for (size_t i = 0; i < _sources.size(); i++) {
-		auto s = _sources[i];
-		auto size = s->getMinimalSize();
+                min_width = std::max(
+                    qreal((sz.width() > 0) ? sz.width() : sh.width())
+                        + 2.0*_lr_padding,
+                    min_width
+                );
 
-		min_height += size.height() + _item_padding;
-		min_width = std::max(size.width(), min_width);
-	}
+            } else {
+                min_height += sh.height();
+                min_width   = std::max(
+                    qreal(sh.width()) + 2.0*_lr_padding,
+                    min_width
+                );
+            }
+        }
+    }
 
-	_min_width = std::max(min_width, _hard_min_width);
-	_min_height = std::max(min_height, _hard_min_height);
+    // sources
+    for (auto s : qAsConst(_sources)) {
+        const auto size = s->getMinimalSize();
+
+        min_height += size.height() + _item_padding;
+        min_width   = std::max(size.width(), min_width);
+    }
+
+    m_MinSize = {
+        std::max(min_width, _hard_min_width  ),
+        std::max(min_height, _hard_min_height)
+    };
 }
 
 
-void GraphicsNode::
+void GraphicsNodePrivate::
 propagateChanges()
 {
-	for (auto sink: _sinks)
-		sink->notifyPositionChange();
+    for (auto s : qAsConst(_sinks))
+        s->notifyPositionChange();
 
-	for (auto source: _sources)
-		source->notifyPositionChange();
+    for (auto s : qAsConst(_sources))
+        s->notifyPositionChange();
 }

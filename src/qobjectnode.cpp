@@ -31,7 +31,7 @@ QObjectnode(QObject *data, QGraphicsItem *parent) : GraphicsNode(parent),
 				continue;
 			if(prop.isReadable() && prop.hasNotifySignal())
 			{
-				GraphicsNodeSocket* node = add_source(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",data,property_count);
+				GraphicsNodeSocket* node = addSource(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",data,property_count);
 
 				PropertyConnection* conn = new PropertyConnection(data, PropertyConnection::Mode::OBJECT);
 				conn->_prop_id  = property_count;
@@ -41,7 +41,7 @@ QObjectnode(QObject *data, QGraphicsItem *parent) : GraphicsNode(parent),
 			}
 
 			if(prop.isWritable()) {
-				GraphicsNodeSocket* node = add_sink(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",data,property_count);
+				GraphicsNodeSocket* node = addSink(QString(prop.name()) + "[" +QString(prop.typeName())  +"]",data,property_count);
 
 				PropertyConnection* conn = new PropertyConnection(data, PropertyConnection::Mode::OBJECT);
 				conn->_prop_id  = property_count;

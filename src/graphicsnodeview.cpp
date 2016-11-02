@@ -281,12 +281,12 @@ leftMouseButtonPress(QMouseEvent *event)
 		QPointF itemPos = item->mapFromScene(scenePos);
 		GraphicsNode *node = static_cast<GraphicsNode*>(item);
 
-		if (itemPos.x() > (node->width() - 10) && (itemPos.y() > (node->height() - 10))) {
+		if (itemPos.x() > (node->size().width() - 10) && (itemPos.y() > (node->size().height() - 10))) {
 			setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
 			_resize_event = new NodeResizeEvent();
 			_resize_event->node = node;
-			_resize_event->orig_width = node->width();
-			_resize_event->orig_height = node->height();
+			_resize_event->orig_width = node->size().width();
+			_resize_event->orig_height = node->size().height();
 			_resize_event->pos = event->pos();
 			event->ignore();
 		}

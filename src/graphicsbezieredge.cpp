@@ -93,9 +93,6 @@ void GraphicsDirectedEdge::onSourceDataChange()
 	const QMetaObject* mo2 = data2->metaObject();
 	QMetaProperty mp2 = mo2->property(_sink->m_index);
 	const char * name2 = mp2.name();
-
-	if(!data2->setProperty(name2,var))
-		qWarning() << "Error Writing QVariant "<< var << "[ " <<name1<<" -> " <<name2<<" ]";
 }
 
 
@@ -149,11 +146,11 @@ connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
 	if (_source)
 	        QObject::disconnect(this,SLOT(onSourceDataChange()));
 
-	n1->connect_source(sourceid, this);
-	n2->connect_sink(sinkid, this);
+	n1->connectSource(sourceid, this);
+	n2->connectSink(sinkid, this);
 
-	connect_source(n1->get_source_socket(sourceid));
-	_sink = n2->get_sink_socket(sinkid);
+	connect_source(n1->getSourceSocket(sourceid));
+	_sink = n2->getSinkSocket(sinkid);
 }
 
 
@@ -201,8 +198,6 @@ disconnect_source()
 	}
 }
 
-
-#include <QDebug>
 void GraphicsDirectedEdge::
 connect_sink(GraphicsNodeSocket *sink)
 {
