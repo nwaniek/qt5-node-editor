@@ -8,8 +8,6 @@
 #include <QResizeEvent>
 #include <QGraphicsItem>
 
-#include <iostream>
-
 #include "graphicsnode.hpp"
 #include "graphicsnodesocket.hpp"
 #include "graphicsnodedefs.hpp"
@@ -17,7 +15,7 @@
 
 #include "graphicsbezieredge_p.h"
 #include "graphicsnodesocket_p.h"
-
+#include "graphicsnode_p.h"
 
 GraphicsNodeView::GraphicsNodeView(QWidget *parent)
 : GraphicsNodeView(nullptr, parent)
@@ -197,7 +195,8 @@ mouseMoveEvent(QMouseEvent *event)
 		}
 	}
 	else if (_resize_event && (event->buttons() & Qt::LeftButton)) {
-		QPointF size = mapToScene(event->pos()) - _resize_event->node->mapToScene(0,0);
+		QPointF size = mapToScene(event->pos())
+            - _resize_event->node->graphicsItem()->mapToScene(0,0);
 		_resize_event->node->setSize(size);
 	}
 	else {
@@ -283,7 +282,7 @@ leftMouseButtonPress(QMouseEvent *event)
 	case GraphicsNodeItemTypes::TypeNode: {
 		QPointF scenePos = mapToScene(event->pos());
 		QPointF itemPos = item->mapFromScene(scenePos);
-		GraphicsNode *node = static_cast<GraphicsNode*>(item);
+		GraphicsNode *node = static_cast<NodeGraphicsItem*>(item)->q_ptr;
 
 		if (itemPos.x() > (node->size().width() - 10) && (itemPos.y() > (node->size().height() - 10))) {
 			setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);

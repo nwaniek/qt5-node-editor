@@ -45,7 +45,7 @@ GraphicsNodeSocket(SocketType socket_type, const QString &text, GraphicsNode *pa
 
     d_ptr->_pen_circle.setWidth(0);
 
-    d_ptr->m_pGraphicsItem = new SocketGraphicsItem(parent, d_ptr);
+    d_ptr->m_pGraphicsItem = new SocketGraphicsItem(parent->graphicsItem(), d_ptr);
 
     d_ptr->m_pGraphicsItem->setAcceptDrops(true);
 }

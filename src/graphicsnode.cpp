@@ -12,6 +12,8 @@
 
 #include <algorithm>
 
+#include "graphicsnode_p.h"
+
 #include "graphicsbezieredge.hpp"
 #include "graphicsnodesocket.hpp"
 #include "graphicsnodesocket_p.h"
@@ -44,6 +46,8 @@ public:
 
     constexpr static const qreal _pen_width = 1.0;
     constexpr static const qreal _socket_size = 6.0;
+
+    NodeGraphicsItem* m_pGraphicsItem;
 
     bool _changed {false};
 
@@ -83,9 +87,13 @@ constexpr const qreal GraphicsNodePrivate::_hard_min_height;
 
 
 GraphicsNode::GraphicsNode(QGraphicsItem *parent)
-: QObject(nullptr), QGraphicsItem(parent), d_ptr(new GraphicsNodePrivate(this))
+: QObject(nullptr), d_ptr(new GraphicsNodePrivate(this))
 {
-    d_ptr->_title_item = new QGraphicsTextItem(this);
+    d_ptr->m_pGraphicsItem = new NodeGraphicsItem(parent);
+    d_ptr->m_pGraphicsItem->d_ptr = d_ptr;
+    d_ptr->m_pGraphicsItem->q_ptr = this;
+
+    d_ptr->_title_item = new QGraphicsTextItem(d_ptr->m_pGraphicsItem);
 
     for (auto p : {
       &d_ptr->_pen_default, &d_ptr->_pen_selected,
@@ -93,9 +101,9 @@ GraphicsNode::GraphicsNode(QGraphicsItem *parent)
     })
         p->setWidth(0);
 
-    setFlag(QGraphicsItem::ItemIsMovable);
-    setFlag(QGraphicsItem::ItemIsSelectable);
-    setFlag(QGraphicsItem::ItemSendsGeometryChanges);
+    d_ptr->m_pGraphicsItem->setFlag(QGraphicsItem::ItemIsMovable);
+    d_ptr->m_pGraphicsItem->setFlag(QGraphicsItem::ItemIsSelectable);
+    d_ptr->m_pGraphicsItem->setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
     d_ptr->_title_item->setDefaultTextColor(Qt::white);
     d_ptr->_title_item->setPos(0, 0);
@@ -103,7 +111,8 @@ GraphicsNode::GraphicsNode(QGraphicsItem *parent)
 
     d_ptr->_effect->setBlurRadius(13.0);
     d_ptr->_effect->setColor(QColor("#99121212"));
-    setGraphicsEffect(d_ptr->_effect);
+
+    d_ptr->m_pGraphicsItem->setGraphicsEffect(d_ptr->_effect);
 
 }
 
@@ -115,7 +124,7 @@ setTitle(const QString &title)
     d_ptr->_title_item->setPlainText(title);
 }
 
-int GraphicsNode::
+int NodeGraphicsItem::
 type() const
 {
     return GraphicsNodeItemTypes::TypeNode;
@@ -125,6 +134,12 @@ QSizeF GraphicsNode::
 size() const
 {
     return d_ptr->m_Size;
+}
+
+QGraphicsItem *GraphicsNode::
+graphicsItem() const
+{
+    return d_ptr->m_pGraphicsItem;
 }
 
 GraphicsNode::
@@ -137,7 +152,7 @@ GraphicsNode::
 }
 
 
-QRectF GraphicsNode::
+QRectF NodeGraphicsItem::
 boundingRect() const
 {
     return QRectF(
@@ -149,7 +164,7 @@ boundingRect() const
 }
 
 
-void GraphicsNode::
+void NodeGraphicsItem::
 paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     const qreal edge_size = 10.0;
@@ -196,7 +211,7 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 }
 
 
-void GraphicsNode::
+void NodeGraphicsItem::
 mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     // TODO: ordering after selection/deselection cycle
@@ -225,12 +240,12 @@ setSize(const QSizeF size)
 {
     d_ptr->m_Size = size;
     d_ptr->_changed = true;
-    prepareGeometryChange();
+    d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
 }
 
 
-QVariant GraphicsNode::
+QVariant NodeGraphicsItem::
 itemChange(GraphicsItemChange change, const QVariant &value)
 {
     switch (change) {
@@ -260,7 +275,7 @@ addSink(const QString &text,QObject *data,int id)
     auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SocketType::SINK, text, this,data,id);
     d_ptr->_sinks.push_back(s);
     d_ptr->_changed = true;
-    prepareGeometryChange();
+    d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
 
     return s;
@@ -273,7 +288,7 @@ addSource(const QString &text,QObject *data,int id)
     auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SocketType::SOURCE, text, this,data,id);
     d_ptr->_sources.push_back(s);
     d_ptr->_changed = true;
-    prepareGeometryChange();
+    d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
 
     return s;
@@ -285,7 +300,7 @@ clearSink()
 {
     d_ptr->_sinks.clear();
     d_ptr->_changed = true;
-    prepareGeometryChange();
+    d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
 }
 
@@ -295,7 +310,7 @@ clearSource()
 {
     d_ptr->_sources.clear();
     d_ptr->_changed = true;
-    prepareGeometryChange();
+    d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
 }
 
@@ -394,10 +409,10 @@ setCentralWidget (QWidget *widget)
     if (d_ptr->_central_proxy)
         delete d_ptr->_central_proxy;
 
-    d_ptr->_central_proxy = new QGraphicsProxyWidget(this);
+    d_ptr->_central_proxy = new QGraphicsProxyWidget(d_ptr->m_pGraphicsItem);
     d_ptr->_central_proxy->setWidget(widget);
     d_ptr->_changed = true;
-    prepareGeometryChange();
+    d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
 }
 
