@@ -1,21 +1,16 @@
 /* See LICENSE file for copyright and license details. */
 
 #include "graphicsnode.hpp"
-#include <QPushButton>
 #include <QPen>
 #include <QPainter>
 #include <QPainterPath>
 #include <QGraphicsProxyWidget>
-#include <QLineEdit>
-#include <QLabel>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsTextItem>
-#include <QTextDocument>
 #include <QGraphicsDropShadowEffect>
-#include <QGraphicsProxyWidget>
+#include <QtWidgets/QWidget>
 
 #include <algorithm>
-#include <iostream>
 
 #include "graphicsbezieredge.hpp"
 #include "graphicsnodesocket.hpp"
@@ -261,7 +256,7 @@ itemChange(GraphicsItemChange change, const QVariant &value)
 GraphicsNodeSocket* GraphicsNode::
 addSink(const QString &text,QObject *data,int id)
 {
-    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SINK, text, this,data,id);
+    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SocketType::SINK, text, this,data,id);
     d_ptr->_sinks.push_back(s);
     d_ptr->_changed = true;
     prepareGeometryChange();
@@ -274,7 +269,7 @@ addSink(const QString &text,QObject *data,int id)
 GraphicsNodeSocket* GraphicsNode::
 addSource(const QString &text,QObject *data,int id)
 {
-    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SOURCE, text, this,data,id);
+    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SocketType::SOURCE, text, this,data,id);
     d_ptr->_sources.push_back(s);
     d_ptr->_changed = true;
     prepareGeometryChange();
@@ -306,8 +301,8 @@ clearSource()
 void GraphicsNode::
 connectSource(int i, GraphicsDirectedEdge *edge)
 {
-    const auto old_edge = d_ptr->_sources[i]->get_edge();
-    d_ptr->_sources[i]->set_edge(edge);
+    const auto old_edge = d_ptr->_sources[i]->edge();
+    d_ptr->_sources[i]->setEdge(edge);
 
     if (old_edge)
         old_edge->sourceDisconnected(this, d_ptr->_sources[i]);
@@ -317,8 +312,8 @@ connectSource(int i, GraphicsDirectedEdge *edge)
 void GraphicsNode::
 connectSink(int i, GraphicsDirectedEdge *edge)
 {
-    const auto old_edge = d_ptr->_sinks[i]->get_edge();
-    d_ptr->_sinks[i]->set_edge(edge);
+    const auto old_edge = d_ptr->_sinks[i]->edge();
+    d_ptr->_sinks[i]->setEdge(edge);
 
     if (old_edge)
         old_edge->sinkDisconnected(this, d_ptr->_sinks[i]);
@@ -344,7 +339,7 @@ updateGeometry()
     qreal ypos1 = _top_margin;
 
     for (auto s : qAsConst(_sinks)) {
-        auto size = s->getSize();
+        auto size = s->size();
 
         // sockets are centered around 0/0
         s->setPos(0, ypos1 + size.height()/2.0);
@@ -356,7 +351,7 @@ updateGeometry()
 
     for (int i = _sources.size(); i > 0; i--) {
         auto s = _sources[i-1];
-        auto size = s->getSize();
+        auto size = s->size();
 
         ypos2 -= size.height();
         s->setPos(m_Size.width(), ypos2 + size.height()/2.0);
@@ -418,7 +413,7 @@ updateSizeHints() {
 
     // sinks
     for (auto s : qAsConst(_sinks)) {
-        auto size = s->getMinimalSize();
+        auto size = s->minimalSize();
 
         min_height += size.height() + _item_padding;
         min_width   = std::max(size.width(), min_width);
@@ -454,7 +449,7 @@ updateSizeHints() {
 
     // sources
     for (auto s : qAsConst(_sources)) {
-        const auto size = s->getMinimalSize();
+        const auto size = s->minimalSize();
 
         min_height += size.height() + _item_padding;
         min_width   = std::max(size.width(), min_width);

@@ -242,9 +242,9 @@ leftMouseButtonPress(QMouseEvent *event)
 
 			// initialize a new drag mode event
 			_drag_event = new EdgeDragEvent();
-			if ((_tmp_edge = sock->get_edge())) {
+			if ((_tmp_edge = sock->edge())) {
 				_drag_event->e = _tmp_edge;
-				if (sock->socket_type() == GraphicsNodeSocket::SINK) {
+				if (sock->socketType() == GraphicsNodeSocket::SocketType::SINK) {
 					_drag_event->e->disconnect_sink();
 					_drag_event->e->set_stop(mapToScene(event->pos()));
 					_drag_event->mode = EdgeDragEvent::move_to_sink;
@@ -256,7 +256,7 @@ leftMouseButtonPress(QMouseEvent *event)
 			}
 			else {
 				_drag_event->e = new GraphicsBezierEdge();
-				if (sock->socket_type() == GraphicsNodeSocket::SINK) {
+				if (sock->socketType() == GraphicsNodeSocket::SocketType::SINK) {
 					_drag_event->e->set_start(mapToScene(event->pos()));
 					_drag_event->e->connect_sink(sock);
 					_drag_event->mode = EdgeDragEvent::connect_to_source;
@@ -322,10 +322,10 @@ bool GraphicsNodeView::
 can_accept_edge(GraphicsNodeSocket *sock)
 {
 	if (sock && _drag_event
-	&&((sock->is_sink() && _drag_event->mode == EdgeDragEvent::move_to_sink)
-	|| (sock->is_sink() && _drag_event->mode == EdgeDragEvent::connect_to_sink)
-	|| (sock->is_source() && _drag_event->mode == EdgeDragEvent::connect_to_source)
-	|| (sock->is_source() && _drag_event->mode == EdgeDragEvent::move_to_source)))
+	&&((sock->isSink() && _drag_event->mode == EdgeDragEvent::move_to_sink)
+	|| (sock->isSink() && _drag_event->mode == EdgeDragEvent::connect_to_sink)
+	|| (sock->isSource() && _drag_event->mode == EdgeDragEvent::connect_to_source)
+	|| (sock->isSource() && _drag_event->mode == EdgeDragEvent::move_to_source)))
 		return true;
 
 	return false;

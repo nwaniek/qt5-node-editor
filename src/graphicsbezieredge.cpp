@@ -13,6 +13,7 @@
 #include "graphicsnode.hpp"
 #include "graphicsnodesocket.hpp"
 
+#include "graphicsnodesocket_p.h"
 
 GraphicsDirectedEdge::
 GraphicsDirectedEdge(QPoint start, QPoint stop, qreal factor)
@@ -81,17 +82,17 @@ void GraphicsDirectedEdge::onSourceDataChange()
 	QVariant var;
 	// get Source Data
 
-	QObject* data1 = _source->m_data;
+	QObject* data1 = _source->d_ptr->m_data;
 	const QMetaObject* mo1 = data1->metaObject();
-	QMetaProperty mp1 = mo1->property(_source->m_index);
+	QMetaProperty mp1 = mo1->property(_source->d_ptr->m_index);
 	const char *name1 = mp1.name();
 
 	var = data1->property(name1);
 
 	// set sink
-	QObject* data2 = _sink->m_data;
+	QObject* data2 = _sink->d_ptr->m_data;
 	const QMetaObject* mo2 = data2->metaObject();
-	QMetaProperty mp2 = mo2->property(_sink->m_index);
+	QMetaProperty mp2 = mo2->property(_sink->d_ptr->m_index);
 	const char * name2 = mp2.name();
 }
 
@@ -158,12 +159,12 @@ void GraphicsDirectedEdge::
 connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
 {
 	if (_source) {
-		QObject* data = _source->m_data;
+		QObject* data = _source->d_ptr->m_data;
 		if (data) QObject::disconnect(data,0,this,0);
 	}
 
-	source->set_edge(this);
-	sink->set_edge(this);
+	source->setEdge(this);
+	sink->setEdge(this);
 	_source = source;
 	_sink = sink;
 }
@@ -173,18 +174,18 @@ void GraphicsDirectedEdge::
 disconnect()
 {
 	if (_source) {
-		_source->set_edge(nullptr);
-		QObject* data = _source->m_data;
+		_source->setEdge(nullptr);
+		QObject* data = _source->d_ptr->m_data;
 		if (data) QObject::disconnect(data,0,this,0);
 	}
-	if (_sink) _sink->set_edge(nullptr);
+	if (_sink) _sink->setEdge(nullptr);
 }
 
 
 void GraphicsDirectedEdge::
 disconnect_sink()
 {
-	if (_sink) _sink->set_edge(nullptr);
+	if (_sink) _sink->setEdge(nullptr);
 }
 
 
@@ -192,8 +193,8 @@ void GraphicsDirectedEdge::
 disconnect_source()
 {
 	if (_source) {
-		_source->set_edge(nullptr);
-		QObject* data = _source->m_data;
+		_source->setEdge(nullptr);
+		QObject* data = _source->d_ptr->m_data;
 		if (data) QObject::disconnect(data,0,this,0);
 	}
 }
@@ -201,9 +202,9 @@ disconnect_source()
 void GraphicsDirectedEdge::
 connect_sink(GraphicsNodeSocket *sink)
 {
-	if (_sink) _sink->set_edge(nullptr);
+	if (_sink) _sink->setEdge(nullptr);
 	_sink = sink;
-	if (_sink) _sink->set_edge(this);
+	if (_sink) _sink->setEdge(this);
 }
 
 
@@ -211,21 +212,21 @@ void GraphicsDirectedEdge::
 connect_source(GraphicsNodeSocket *source)
 {
 	if (_source){
-		_source->set_edge(nullptr);
+		_source->setEdge(nullptr);
 
-		QObject* data = _source->m_data;
+		QObject* data = _source->d_ptr->m_data;
 		if (data) QObject::disconnect(data, 0, this, 0);
 	}
 
 	_source = source;
 
 	if (_source){
-		_source->set_edge(this);
+		_source->setEdge(this);
 
-		QObject* data = _source->m_data;
+		QObject* data = _source->d_ptr->m_data;
 		if (data) {
 			const QMetaObject* mo = data->metaObject();
-			QMetaProperty mp = mo->property(_source->m_index);
+			QMetaProperty mp = mo->property(_source->d_ptr->m_index);
 			QMetaMethod notifySignal = mp.notifySignal();
 
 			int functionIndex = metaObject()->indexOfSlot("onSourceDataChange()");
