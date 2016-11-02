@@ -14,6 +14,7 @@
 
 #include "graphicsbezieredge.hpp"
 #include "graphicsnodesocket.hpp"
+#include "graphicsnodesocket_p.h"
 
 #if QT_VERSION < 0x050700
 //Q_FOREACH is deprecated and Qt CoW containers are detached on C++11 for loops
@@ -336,7 +337,7 @@ updateGeometry()
         auto size = s->size();
 
         // sockets are centered around 0/0
-        s->setPos(0, ypos1 + size.height()/2.0);
+        s->graphicsItem()->setPos(0, ypos1 + size.height()/2.0);
         ypos1 += size.height() + _item_padding;
     }
 
@@ -348,7 +349,7 @@ updateGeometry()
         auto size = s->size();
 
         ypos2 -= size.height();
-        s->setPos(m_Size.width(), ypos2 + size.height()/2.0);
+        s->graphicsItem()->setPos(m_Size.width(), ypos2 + size.height()/2.0);
         ypos2 -= _item_padding;
     }
 
@@ -460,8 +461,8 @@ void GraphicsNodePrivate::
 propagateChanges()
 {
     for (auto s : qAsConst(_sinks))
-        s->notifyPositionChange();
+        s->d_ptr->notifyPositionChange();
 
     for (auto s : qAsConst(_sources))
-        s->notifyPositionChange();
+        s->d_ptr->notifyPositionChange();
 }

@@ -1,7 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 
 #include "graphicsbezieredge.hpp"
-#include <QPoint>
 #include <algorithm>
 #include <QPainter>
 #include <QGraphicsSceneMouseEvent>

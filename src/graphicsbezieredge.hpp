@@ -3,7 +3,7 @@
 #ifndef GRAPHICS_DIRECTED_EDGE_H
 #define GRAPHICS_DIRECTED_EDGE_H
 
-#include <QPoint>
+#include <QtCore/QPoint>
 #include "graphicsnodedefs.hpp"
 
 class GraphicsNodeSocket;
@@ -14,6 +14,7 @@ class GraphicsDirectedEdge : public QObject
 {
     friend class GraphicsNodeView; //To allow intermediate positions
     friend class GraphicsNodeSocket; //To allow intermediate positions
+    friend class GraphicsNodeSocketPrivate; //To allow intermediate positions
 
     Q_OBJECT
 public:

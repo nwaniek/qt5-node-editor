@@ -7,7 +7,6 @@
 #include <QFont>
 #include <QFontMetrics>
 
-#include <iostream>
 #include <algorithm>
 
 #include "graphicsbezieredge.hpp"
@@ -31,8 +30,7 @@ GraphicsNodeSocket(SocketType type, GraphicsNode *parent)
 
 GraphicsNodeSocket::
 GraphicsNodeSocket(SocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index)
-: QGraphicsItem(parent), d_ptr(new GraphicsNodeSocketPrivate())
-
+: QObject(), d_ptr(new GraphicsNodeSocketPrivate(this))
 {
     d_ptr->m_data  = data;
     d_ptr->m_index = index;
@@ -47,9 +45,16 @@ GraphicsNodeSocket(SocketType socket_type, const QString &text, GraphicsNode *pa
 
     d_ptr->_pen_circle.setWidth(0);
 
-    setAcceptDrops(true);
+    d_ptr->m_pGraphicsItem = new SocketGraphicsItem(parent, d_ptr);
+
+    d_ptr->m_pGraphicsItem->setAcceptDrops(true);
 }
 
+QGraphicsItem *GraphicsNodeSocket::
+graphicsItem() const
+{
+    return d_ptr->m_pGraphicsItem;
+}
 
 GraphicsNodeSocket::SocketType GraphicsNodeSocket::
 socketType() const
@@ -57,7 +62,7 @@ socketType() const
     return d_ptr->_socket_type;
 }
 
-int GraphicsNodeSocket::
+int SocketGraphicsItem::
 type() const
 {
     return GraphicsNodeItemTypes::TypeSocket;
@@ -76,15 +81,16 @@ isSource() const
 }
 
 
-QRectF GraphicsNodeSocket::
+QRectF SocketGraphicsItem::
 boundingRect() const
 {
-    const QSizeF s = size();
+    const QSizeF s = d_ptr->q_ptr->size();
     const qreal  x = -d_ptr->_circle_radius - d_ptr->_pen_width/2;
     const qreal  y = -s.height()/2.0 - d_ptr->_pen_width/2;
 
     return QRectF(
-        d_ptr->_socket_type == SocketType::SINK ? x : -s.width()-x,
+        d_ptr->_socket_type == GraphicsNodeSocket::SocketType::SINK ?
+            x : -s.width()-x,
         y,
         s.width(),
         s.height()
@@ -151,14 +157,14 @@ drawAlignedText(QPainter *painter)
 }
 
 
-QPointF GraphicsNodeSocket::
+QPointF GraphicsNodeSocketPrivate::
 sceneAnchorPos() const
 {
-    return mapToScene(0,0);
+    return m_pGraphicsItem->mapToScene(0,0);
 }
 
 
-void GraphicsNodeSocket::
+void SocketGraphicsItem::
 paint(QPainter *painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/)
 {
     painter->setPen(d_ptr->_pen_circle);
@@ -181,37 +187,39 @@ paint(QPainter *painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * 
 }
 
 
-void GraphicsNodeSocket::
+void SocketGraphicsItem::
 mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mouseMoveEvent(event);
 }
 
 
-void GraphicsNodeSocket::
+void SocketGraphicsItem::
 mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mouseReleaseEvent(event);
 }
 
 
-bool GraphicsNodeSocket::
+bool GraphicsNodeSocketPrivate::
 isInSocketCircle(const QPointF &p) const
 {
-    return p.x() >= -d_ptr->_circle_radius
-        && p.x() <=  d_ptr->_circle_radius
-        && p.y() >= -d_ptr->_circle_radius
-        && p.y() <=  d_ptr->_circle_radius;
+    return p.x() >= -_circle_radius
+        && p.x() <=  _circle_radius
+        && p.y() >= -_circle_radius
+        && p.y() <=  _circle_radius;
 }
 
 
-void GraphicsNodeSocket::
+void SocketGraphicsItem::
 mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mousePressEvent(event);
 }
 
-
+/**
+* set the edge for this socket
+*/
 void GraphicsNodeSocket::
 setEdge(GraphicsDirectedEdge *edge)
 {
@@ -229,20 +237,20 @@ setEdge(GraphicsDirectedEdge *edge)
         }
     }
 
-    notifyPositionChange();
+    d_ptr->notifyPositionChange();
 }
 
-void GraphicsNodeSocket::
+void GraphicsNodeSocketPrivate::
 notifyPositionChange()
 {
-    if (!d_ptr->_edge) return;
+    if (!_edge) return;
 
-    switch (d_ptr->_socket_type) {
-    case SocketType::SINK:
-        d_ptr->_edge->d_ptr->setStop(mapToScene(0,0));
+    switch (_socket_type) {
+    case GraphicsNodeSocket::SocketType::SINK:
+        _edge->d_ptr->setStop(m_pGraphicsItem->mapToScene(0,0));
         break;
-    case SocketType::SOURCE:
-        d_ptr->_edge->d_ptr->setStart(mapToScene(0,0));
+    case GraphicsNodeSocket::SocketType::SOURCE:
+        _edge->d_ptr->setStart(m_pGraphicsItem->mapToScene(0,0));
         break;
     }
 }

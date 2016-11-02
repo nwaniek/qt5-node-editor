@@ -16,6 +16,7 @@
 #include "graphicsbezieredge.hpp"
 
 #include "graphicsbezieredge_p.h"
+#include "graphicsnodesocket_p.h"
 
 
 GraphicsNodeView::GraphicsNodeView(QWidget *parent)
@@ -183,12 +184,11 @@ mouseMoveEvent(QMouseEvent *event)
 		}
 
 		// update visual feedback
-		auto item = socket_at(event->pos());
-		if (!item) {
+		auto sock = socket_at(event->pos());
+		if (!sock) {
 			viewport()->setCursor(Qt::ClosedHandCursor);
 		}
-		else if (item->type() == GraphicsNodeItemTypes::TypeSocket) {
-			GraphicsNodeSocket *sock = static_cast<GraphicsNodeSocket*>(item);
+		else {
 			if (!can_accept_edge(sock))
 				viewport()->setCursor(Qt::ForbiddenCursor);
 			else {
@@ -204,11 +204,11 @@ mouseMoveEvent(QMouseEvent *event)
 		// no button is pressed, so indicate what the user can do with
 		// the item by changing the cursor
 		if (event->buttons() == 0) {
-			auto item = socket_at(event->pos());
-			if (item) {
+			auto sock = socket_at(event->pos());
+			if (sock) {
 				QPointF scenePos = mapToScene(event->pos());
-				QPointF itemPos = item->mapFromScene(scenePos);
-				if (item->isInSocketCircle(itemPos))
+				QPointF itemPos = sock->graphicsItem()->mapFromScene(scenePos);
+				if (sock->d_ptr->isInSocketCircle(itemPos))
 					viewport()->setCursor(Qt::OpenHandCursor);
 				else
 					viewport()->setCursor(Qt::ArrowCursor);
@@ -238,10 +238,10 @@ leftMouseButtonPress(QMouseEvent *event)
 	case GraphicsNodeItemTypes::TypeSocket: {
 		QPointF scenePos = mapToScene(event->pos());
 		QPointF itemPos = item->mapFromScene(scenePos);
-		GraphicsNodeSocket *sock = dynamic_cast<GraphicsNodeSocket*>(item);
-        Q_ASSERT(sock);
 
-		if (sock->isInSocketCircle(itemPos)) {
+		GraphicsNodeSocket *sock = static_cast<SocketGraphicsItem*>(item)->d_ptr->q_ptr;
+
+		if (sock->d_ptr->isInSocketCircle(itemPos)) {
 			viewport()->setCursor(Qt::ClosedHandCursor);
 
 			// initialize a new drag mode event
@@ -351,8 +351,11 @@ socket_at(QPoint pos)
 			break;
 		}
 	}
-	if (item)
-		return static_cast<GraphicsNodeSocket*>(item);
-	else
+
+	if (item && item->type() == GraphicsNodeItemTypes::TypeSocket)
+		return static_cast<SocketGraphicsItem*>(item)->d_ptr->q_ptr;
+	else {
+//         qDebug() << "\n\nNOT FOUND";
 		return nullptr;
+    }
 }
