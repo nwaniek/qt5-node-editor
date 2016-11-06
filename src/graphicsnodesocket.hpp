@@ -14,6 +14,7 @@ class QGraphicsSceneDragDropEvent;
 class GraphicsDirectedEdge;
 
 class GraphicsNode;
+class QNodeEditorSocketModel;
 
 class GraphicsNodeSocketPrivate;
 
@@ -25,10 +26,11 @@ class GraphicsNodeSocket : public QObject
 {
     Q_OBJECT
     friend class GraphicsDirectedEdge; // could be removed once the model is ready
-    friend class GraphicsNode; // For the constructor
+    friend class GraphicsNode; // For the constructor TODO no longer needed?
     friend class GraphicsNodePrivate; // for notifyPositionChange //TODO remove
     friend class GraphicsDirectedEdgePrivate; // could be removed once the model is ready
     friend class GraphicsNodeView; //for the view helpers, could be removed
+    friend class QNodeEditorSocketModelPrivate; // For the constructor
 public:
     /*
     * the socket comes in two flavors: either as sink or as source for a
@@ -63,8 +65,8 @@ Q_SIGNALS:
     void connectedTo(GraphicsNodeSocket* other);
 
 private:
-    explicit GraphicsNodeSocket(SocketType socket_type, GraphicsNode *parent = nullptr);
-    GraphicsNodeSocket(SocketType socket_type, const QString &text, GraphicsNode *parent = nullptr,QObject *data=0,int index=0);
+    explicit GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType socket_type, GraphicsNode *parent = nullptr);
+    GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType socket_type, const QString &text, GraphicsNode *parent = nullptr,QObject *data=0,int index=0);
 
     GraphicsNodeSocketPrivate* d_ptr;
     Q_DECLARE_PRIVATE(GraphicsNodeSocket)

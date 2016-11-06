@@ -4,6 +4,11 @@
 #include <QtCore/QObject>
 #include "graphicsnode.hpp"
 
+#include "qmultimodeltree.h"
+#include "qreactiveproxymodel.h"
+
+#include <QtWidgets/QApplication>
+
 class QAbstractItemModel;
 
 class Modelnode;
@@ -13,69 +18,82 @@ class Modelnode;
  * implementations
  */
 
-class QObjectnodePrivate final : public QObject
-{
-	Q_OBJECT
-public:
-	QObject* _data;
-	QHash<int, QMetaObject::Connection> _source_connections;
-	QHash<int, QMetaObject::Connection> _sink_connections;
+// static QMultiModelTree* s_Models() {
+// 		static auto i = new QMultiModelTree(QApplication::instance()); //FIXME remove from the global scope once the data layer is ready.
+// 
+// 		return i;
+// }
+// 
+// static QReactiveProxyModel* s_CModels() {
+// 		static auto ci = new QReactiveProxyModel(QApplication::instance()); //FIXME remove
+// 		ci->setSourceModel(s_Models());
+// 
+// 		return ci;
+// }
 
-public Q_SLOTS:
-	void slotConnected(GraphicsNodeSocket* other);
-};
+// class QObjectnodePrivate final : public QObject
+// {
+// 	Q_OBJECT
+// public:
+// 	QObject* _data;
+// 	QHash<int, QMetaObject::Connection> _source_connections;
+// 	QHash<int, QMetaObject::Connection> _sink_connections;
+// 
+// public Q_SLOTS:
+// 	void slotConnected(GraphicsNodeSocket* other);
+// };
+// 
+// class ModelnodePrivate final : public QObject
+// {
+// 	Q_OBJECT
+// public:
+// 	QAbstractItemModel* _model;
+// 	QVector<QMetaObject::Connection> _source_connections;
+// 	QVector<QMetaObject::Connection> _sink_connections;
+// 	
+// 	int m_IdRole {Qt::DisplayRole};
+// 	int m_TitleRole {Qt::DisplayRole};
+// 	int m_ObjectRole {Qt::UserRole};
+// 	int m_ConnectedObjectRole {-1}; // The role to call setData with
+// 	int m_ConnectedPropertyRole {-1}; // The SINK model role
+// 	QByteArray m_ConnectedProperty {}; // The SINK object property
+// 	int m_ConnectedModelIndexRole {-1};
+// 
+// 	QString m_ObjectProperty {QString()}; //The object itself
+// 	
+// 	Modelnode *q_ptr;
+// 
+// public Q_SLOTS:
+// 	void slotConnected(GraphicsNodeSocket* other);
+// 	void slotRowsInserted(const QModelIndex &parent, int first, int last);
+// 	void slotRowsRemoved(const QModelIndex &parent, int first, int last);
+// 	void slotRowsMoved(const QModelIndex &parent, int first, int last);
+// 	void slotDataChanged(const QModelIndex &tl, const QModelIndex &br);
+// 	void slotReset();
+// 	void slotLayoutChanged();
+// };
 
-class ModelnodePrivate final : public QObject
-{
-	Q_OBJECT
-public:
-	QAbstractItemModel* _model;
-	QVector<QMetaObject::Connection> _source_connections;
-	QVector<QMetaObject::Connection> _sink_connections;
-	
-	int m_IdRole {Qt::DisplayRole};
-	int m_TitleRole {Qt::DisplayRole};
-	int m_ObjectRole {Qt::UserRole};
-	int m_ConnectedObjectRole {-1}; // The role to call setData with
-	int m_ConnectedPropertyRole {-1}; // The SINK model role
-	QByteArray m_ConnectedProperty {}; // The SINK object property
-	int m_ConnectedModelIndexRole {-1};
 
-	QString m_ObjectProperty {QString()}; //The object itself
-	
-	Modelnode *q_ptr;
-
-public Q_SLOTS:
-	void slotConnected(GraphicsNodeSocket* other);
-	void slotRowsInserted(const QModelIndex &parent, int first, int last);
-	void slotRowsRemoved(const QModelIndex &parent, int first, int last);
-	void slotRowsMoved(const QModelIndex &parent, int first, int last);
-	void slotDataChanged(const QModelIndex &tl, const QModelIndex &br);
-	void slotReset();
-	void slotLayoutChanged();
-};
-
-
-class PropertyConnection final : public QObject //TODO make private
-{
-	Q_OBJECT
-public:
-	enum class Mode {
-		MODEL,
-		OBJECT
-	};
-
-	explicit PropertyConnection(QObject* parent, Mode mode);
-	~PropertyConnection();
-
-	const QMetaObject* _source_mo;
-	QMetaObject::Connection _conn;
-	int _prop_id;
-	Mode _mode;
-	QObjectnodePrivate* d_ptr;
-	ModelnodePrivate* d_ptr2;
-};
-Q_DECLARE_METATYPE(PropertyConnection*)
-
+// class PropertyConnection final : public QObject //TODO make private
+// {
+// 	Q_OBJECT
+// public:
+// 	enum class Mode {
+// 		MODEL,
+// 		OBJECT
+// 	};
+// 
+// 	explicit PropertyConnection(QObject* parent, Mode mode);
+// 	~PropertyConnection();
+// 
+// 	const QMetaObject* _source_mo;
+// 	QMetaObject::Connection _conn;
+// 	int _prop_id;
+// 	Mode _mode;
+// 	QObjectnodePrivate* d_ptr;
+// 	ModelnodePrivate* d_ptr2;
+// };
+// Q_DECLARE_METATYPE(PropertyConnection*)
+// 
 #endif
-// kate: space-indent off;; indent-width 8; replace-tabs off;
+// // kate: space-indent off;; indent-width 8; replace-tabs off;

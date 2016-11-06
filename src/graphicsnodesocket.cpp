@@ -15,6 +15,8 @@
 
 #include "graphicsnodesocket_p.h"
 
+#include "qnodeeditorsocketmodel.h"
+
 #define BRUSH_COLOR_SINK      QColor("#FF0077FF")
 #define BRUSH_COLOR_SOURCE    QColor("#FFFF7700")
 #define TEXT_ALIGNMENT_SINK   Qt::AlignLeft
@@ -23,17 +25,17 @@
 #include "graphicsbezieredge_p.h"
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(SocketType type, GraphicsNode *parent)
-: GraphicsNodeSocket(type, QString(), parent)
+GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType type, GraphicsNode *parent)
+: GraphicsNodeSocket(model, type, QString(), parent)
 { }
 
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(SocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index)
+GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index)
 : QObject(), d_ptr(new GraphicsNodeSocketPrivate(this))
 {
-    d_ptr->m_data  = data;
-    d_ptr->m_index = index;
+    d_ptr->m_data  = data; //FIXME dead code 
+    d_ptr->m_index = index; //FIXME user QPersistentModelIndex
 
     d_ptr->_socket_type = socket_type;
 

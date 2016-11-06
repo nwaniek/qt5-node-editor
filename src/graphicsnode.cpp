@@ -18,6 +18,8 @@
 #include "graphicsnodesocket.hpp"
 #include "graphicsnodesocket_p.h"
 
+#include "qnodeeditorsocketmodel.h"
+
 #if QT_VERSION < 0x050700
 //Q_FOREACH is deprecated and Qt CoW containers are detached on C++11 for loops
 template<typename T>
@@ -31,6 +33,9 @@ class GraphicsNodePrivate final
 {
 public:
     explicit GraphicsNodePrivate(GraphicsNode* q) : q_ptr(q) {}
+
+    QNodeEditorSocketModel* m_pModel;
+    QPersistentModelIndex m_Index;
 
     // TODO: change pairs of sizes to QPointF, QSizeF, or quadrupels to QRectF
 
@@ -70,9 +75,6 @@ public:
 
     QString _title;
 
-    QVector<GraphicsNodeSocket*> _sources;
-    QVector<GraphicsNodeSocket*> _sinks;
-
     // Helpers
     void updateGeometry();
     void updateSizeHints();
@@ -86,9 +88,12 @@ constexpr const qreal GraphicsNodePrivate::_hard_min_width;
 constexpr const qreal GraphicsNodePrivate::_hard_min_height;
 
 
-GraphicsNode::GraphicsNode(QGraphicsItem *parent)
+GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModelIndex& index, QGraphicsItem *parent)
 : QObject(nullptr), d_ptr(new GraphicsNodePrivate(this))
 {
+    d_ptr->m_pModel = model;
+    d_ptr->m_Index = index;
+
     d_ptr->m_pGraphicsItem = new NodeGraphicsItem(parent);
     d_ptr->m_pGraphicsItem->d_ptr = d_ptr;
     d_ptr->m_pGraphicsItem->q_ptr = this;
@@ -249,13 +254,9 @@ QVariant NodeGraphicsItem::
 itemChange(GraphicsItemChange change, const QVariant &value)
 {
     switch (change) {
-    case QGraphicsItem::ItemSelectedChange: {
-        if (value == true)
-            setZValue(1);
-        else
-            setZValue(0);
+    case QGraphicsItem::ItemSelectedChange:
+        setZValue(value.toBool() ? 1 : 0);
         break;
-    }
     case QGraphicsItem::ItemPositionChange:
     case QGraphicsItem::ItemPositionHasChanged:
         d_ptr->propagateChanges();
@@ -268,47 +269,8 @@ itemChange(GraphicsItemChange change, const QVariant &value)
     return QGraphicsItem::itemChange(change, value);
 }
 
-
-GraphicsNodeSocket* GraphicsNode::
-addSink(const QString &text,QObject *data,int id)
+void GraphicsNode::update()
 {
-    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SocketType::SINK, text, this,data,id);
-    d_ptr->_sinks.push_back(s);
-    d_ptr->_changed = true;
-    d_ptr->m_pGraphicsItem->prepareGeometryChange();
-    d_ptr->updateGeometry();
-
-    return s;
-}
-
-
-GraphicsNodeSocket* GraphicsNode::
-addSource(const QString &text,QObject *data,int id)
-{
-    auto s = new GraphicsNodeSocket(GraphicsNodeSocket::SocketType::SOURCE, text, this,data,id);
-    d_ptr->_sources.push_back(s);
-    d_ptr->_changed = true;
-    d_ptr->m_pGraphicsItem->prepareGeometryChange();
-    d_ptr->updateGeometry();
-
-    return s;
-}
-
-
-void GraphicsNode::
-clearSink()
-{
-    d_ptr->_sinks.clear();
-    d_ptr->_changed = true;
-    d_ptr->m_pGraphicsItem->prepareGeometryChange();
-    d_ptr->updateGeometry();
-}
-
-
-void GraphicsNode::
-clearSource()
-{
-    d_ptr->_sources.clear();
     d_ptr->_changed = true;
     d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
@@ -317,16 +279,22 @@ clearSource()
 void GraphicsNode::
 connectSource(int i, GraphicsDirectedEdge *edge)
 {
-    const auto old_edge = d_ptr->_sources[i]->edge();
-    d_ptr->_sources[i]->setEdge(edge);
+    //FIXME
+//     const auto old_edge = d_ptr->_sources[i]->edge();
+//     d_ptr->_sources[i]->setEdge(edge);
 }
 
 
 void GraphicsNode::
 connectSink(int i, GraphicsDirectedEdge *edge)
 {
-    const auto old_edge = d_ptr->_sinks[i]->edge();
-    d_ptr->_sinks[i]->setEdge(edge);
+    auto sink = d_ptr->m_pModel->getSinkSocket(
+        d_ptr->m_pModel->index(i, 0, d_ptr->m_Index)
+    );
+    Q_ASSERT(sink);
+
+    const auto old_edge = sink->edge();
+    sink->setEdge(edge);
 }
 
 
@@ -348,8 +316,8 @@ updateGeometry()
 
     qreal ypos1 = _top_margin;
 
-    for (auto s : qAsConst(_sinks)) {
-        auto size = s->size();
+    for (auto s : qAsConst(m_pModel->getSinkSockets(m_Index))) {
+        const auto size = s->size();
 
         // sockets are centered around 0/0
         s->graphicsItem()->setPos(0, ypos1 + size.height()/2.0);
@@ -359,9 +327,8 @@ updateGeometry()
     // sources are placed bottom/right
     qreal ypos2 = m_Size.height() - _bottom_margin;
 
-    for (int i = _sources.size(); i > 0; i--) {
-        auto s = _sources[i-1];
-        auto size = s->size();
+    for (auto s : qAsConst(m_pModel->getSourceSockets(m_Index))) {
+        const auto size = s->size();
 
         ypos2 -= size.height();
         s->graphicsItem()->setPos(m_Size.width(), ypos2 + size.height()/2.0);
@@ -371,14 +338,12 @@ updateGeometry()
 
     // central widget
     if (_central_proxy) {
-        QRectF geom {
+        _central_proxy->setGeometry({
             _lr_padding,
             ypos1,
             m_Size.width() - 2.0 * _lr_padding,
             ypos2 - ypos1
-        };
-
-        _central_proxy->setGeometry(geom);
+        });
     }
 
     _changed = false;
@@ -389,17 +354,17 @@ updateGeometry()
 GraphicsNodeSocket* GraphicsNode::
 getSourceSocket(const size_t id) const
 {
-    return (id < d_ptr->_sources.size()) ?
-        d_ptr->_sources[id] :
-        nullptr;
+    return d_ptr->m_pModel->getSourceSocket(
+        d_ptr->m_pModel->index(id, 0, d_ptr->m_Index)
+    ); //TODO remove
 }
 
 GraphicsNodeSocket* GraphicsNode::
 getSinkSocket(const size_t id) const
 {
-    return (id < d_ptr->_sinks.size()) ?
-        d_ptr->_sinks[id] :
-        nullptr;
+    return d_ptr->m_pModel->getSinkSocket(
+        d_ptr->m_pModel->index(id, 0, d_ptr->m_Index)
+    ); //TODO remove
 }
 
 
@@ -422,7 +387,7 @@ updateSizeHints() {
     qreal min_width(0.0), min_height(_top_margin + _bottom_margin);
 
     // sinks
-    for (auto s : qAsConst(_sinks)) {
+    for (auto s : qAsConst(m_pModel->getSinkSockets(m_Index))) {
         auto size = s->minimalSize();
 
         min_height += size.height() + _item_padding;
@@ -458,7 +423,7 @@ updateSizeHints() {
     }
 
     // sources
-    for (auto s : qAsConst(_sources)) {
+    for (auto s : qAsConst(m_pModel->getSourceSockets(m_Index))) {
         const auto size = s->minimalSize();
 
         min_height += size.height() + _item_padding;
@@ -475,9 +440,9 @@ updateSizeHints() {
 void GraphicsNodePrivate::
 propagateChanges()
 {
-    for (auto s : qAsConst(_sinks))
+    for (auto s : qAsConst(m_pModel->getSinkSockets(m_Index)))
         s->d_ptr->notifyPositionChange();
 
-    for (auto s : qAsConst(_sources))
+    for (auto s : qAsConst(m_pModel->getSourceSockets(m_Index)))
         s->d_ptr->notifyPositionChange();
 }

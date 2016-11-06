@@ -16,20 +16,21 @@ class QGraphicsTextItem;
 class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
 
+class QNodeEditorSocketModel;
+
 class GraphicsNodePrivate;
 
 class GraphicsNode : public QObject
 {
+    friend class QNodeEditorSocketModelPrivate; // For creating GraphicsNodes
     Q_OBJECT
+
 public:
-    explicit GraphicsNode(QGraphicsItem *parent = nullptr);
-    virtual ~GraphicsNode();
+//     GraphicsNodeSocket* addSink(const QString &text,QObject *data=0,int id=0);
+//     GraphicsNodeSocket* addSource(const QString &text,QObject *data=0,int id=0);
 
-    GraphicsNodeSocket* addSink(const QString &text,QObject *data=0,int id=0);
-    GraphicsNodeSocket* addSource(const QString &text,QObject *data=0,int id=0);
-
-    void clearSink();
-    void clearSource();
+//     void clearSink();
+//     void clearSource();
 
     GraphicsNodeSocket* getSourceSocket(const size_t id) const;
     GraphicsNodeSocket* getSinkSocket(const size_t id) const;
@@ -48,13 +49,17 @@ public:
     void setSize(const QSizeF size);
     void setSize(const QPointF size);
 
-
     /**
         * set a regular QWidget as central widget
         */
     void setCentralWidget(QWidget *widget);
 
 private:
+    explicit GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModelIndex& index, QGraphicsItem *parent = nullptr);
+    virtual ~GraphicsNode();
+
+    void update();
+
     GraphicsNodePrivate* d_ptr;
     Q_DECLARE_PRIVATE(GraphicsNode)
 };

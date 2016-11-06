@@ -43,6 +43,7 @@ GraphicsDirectedEdge(const QPoint& start, const QPoint& stop, qreal factor)
 : QObject(), d_ptr(new GraphicsDirectedEdgePrivate(this))
 
 {
+    d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr);
     d_ptr->_start  = start;
     d_ptr->_stop   = stop;
     d_ptr->_factor = factor;
@@ -285,7 +286,7 @@ updatePath()
     QPainterPath path(d_ptr->_start);
 
     // compute anchor point offsets
-    const qreal min_dist = 0.f;
+    const qreal min_dist = 0.f; //FIXME this is dead code? can the code below ever get negative?
 
     const qreal dist = (d_ptr->_start.x() <= d_ptr->_stop.x()) ?
         std::max(min_dist, (d_ptr->_stop.x() - d_ptr->_start.x()) * d_ptr->_factor):

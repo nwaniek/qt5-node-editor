@@ -83,7 +83,6 @@ QHash<const QMetaObject*, MetaPropertyColumnMapper*> QObjectModelPrivate::m_hMap
 QObjectModel::QObjectModel(QObject* parent) : QAbstractItemModel(parent),
 d_ptr(new QObjectModelPrivate())
 {
-    
 }
 
 QObjectModel::QObjectModel(const QList<QObject*> objs, Qt::Orientation o, int dr, QObject* p) :
@@ -127,6 +126,19 @@ QVariant QObjectModel::data(const QModelIndex& idx, int role) const
     }
 
     return {};
+}
+
+bool QObjectModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if (!index.isValid()) return false;
+
+    const auto item = static_cast<InternalItem*>(index.internalPointer());
+
+    if (!value.canConvert(item->m_pProp->metaType))
+        return false;
+
+    item->m_pObject->setProperty(item->m_pProp->name, value);
+    return true;
 }
 
 int QObjectModel::rowCount(const QModelIndex& parent) const
@@ -236,6 +248,8 @@ void QObjectModel::setReadOnly(bool value)
 
 void QObjectModel::addObject(QObject* obj)
 {
+    //FIXME handle when the object is deleted
+    //FIXME watch for property changes
     if (!obj) return;
 
     auto mapper = d_ptr->getMapper(obj);
@@ -259,6 +273,7 @@ void QObjectModel::addObject(QObject* obj)
 
     beginInsertRows({}, list->size(), list->size()+mapper->m_lProperties.size()-2); //FIXME support columns
     for (auto p : qAsConst(mapper->m_lProperties)) {
+        // Add the existing item to its own column to simplify the code elsewhere
         (*list) << ((p==item->m_pProp) ? item : new InternalItem {
             d_ptr->m_lRows.size(),
             obj,
@@ -343,7 +358,6 @@ MetaPropertyColumnMapper* QObjectModelPrivate::getMapper(QObject* o)
         if (!p.isUser()) //TODO remove this and add capability filters
             continue;
 
-        qDebug() << "COULD" << (p.isWritable     () ? CAP::WRITE  : CAP::NONE);
         mapper->m_lProperties << new MetaPropertyColumnMapper::Property {
             (
                 (p.isReadable     () ? CAP::READ   : CAP::NONE) |

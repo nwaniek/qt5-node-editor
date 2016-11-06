@@ -1,5 +1,7 @@
 #include "qmultimodeltree.h"
 
+#include <QtCore/QDebug>
+
 struct InternalItem
 {
     enum class Mode {
@@ -17,8 +19,12 @@ struct InternalItem
 class QMultiModelTreePrivate : public QObject
 {
 public:
+    explicit QMultiModelTreePrivate(QObject* p) : QObject(p) {}
+
     QVector<InternalItem*> m_lRows;
     QHash<const QAbstractItemModel*, InternalItem*> m_hModels;
+
+    QMultiModelTree* q_ptr;
 
 public Q_SLOTS:
     void slotRowsInserted(const QModelIndex& parent, int first, int last);
@@ -26,8 +32,9 @@ public Q_SLOTS:
 };
 
 QMultiModelTree::QMultiModelTree(QObject* parent) : QAbstractItemModel(parent),
-    d_ptr(new QMultiModelTreePrivate)
+    d_ptr(new QMultiModelTreePrivate(this))
 {
+    d_ptr->q_ptr = this;
 }
 
 QMultiModelTree::~QMultiModelTree()
@@ -89,6 +96,7 @@ int QMultiModelTree::rowCount(const QModelIndex& parent) const
 
 int QMultiModelTree::columnCount(const QModelIndex& parent) const
 {
+    Q_UNUSED(parent)
     return 1;
 }
 
@@ -102,6 +110,10 @@ QModelIndex QMultiModelTree::index(int row, int column, const QModelIndex& paren
     )
         return createIndex(row, column, d_ptr->m_lRows[row]);
 
+    if ((!parent.isValid()) || parent.model() != this)
+        return {};
+
+
     const auto i = static_cast<InternalItem*>(parent.internalPointer());
 
     return mapFromSource(i->m_pModel->index(row, column));
@@ -109,7 +121,9 @@ QModelIndex QMultiModelTree::index(int row, int column, const QModelIndex& paren
 
 Qt::ItemFlags QMultiModelTree::flags(const QModelIndex &idx) const
 {
-    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+    const auto pidx = mapToSource(idx);
+    return pidx.isValid() ?
+        pidx.flags() : Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
 
 QModelIndex QMultiModelTree::parent(const QModelIndex& idx) const
@@ -130,9 +144,10 @@ QModelIndex QMultiModelTree::mapFromSource(const QModelIndex& sourceIndex) const
     if ((!sourceIndex.isValid()) || sourceIndex.parent().isValid() || sourceIndex.column())
         return {};
 
+
     const auto i = d_ptr->m_hModels[sourceIndex.model()];
 
-    if (!i && sourceIndex.row() >= i->m_lChildren.size())
+    if ((!i) || sourceIndex.row() >= i->m_lChildren.size())
         return {};
 
     return createIndex(sourceIndex.row(), 0, i->m_lChildren[sourceIndex.row()]);
@@ -158,6 +173,9 @@ void QMultiModelTreePrivate::slotAddRows(const QModelIndex& parent, int first, i
     auto p = m_hModels[src];
     Q_ASSERT(p);
 
+    const auto localParent = q_ptr->index(p->m_Index, 0);
+
+    q_ptr->beginInsertRows(localParent, first, last);
     for (int i = first; i <= last; i++) {
         p->m_lChildren << new InternalItem {
             p->m_lChildren.size(),
@@ -167,6 +185,7 @@ void QMultiModelTreePrivate::slotAddRows(const QModelIndex& parent, int first, i
             {}
         };
     }
+    q_ptr->endInsertRows();
 }
 
 void QMultiModelTreePrivate::slotRowsInserted(const QModelIndex& parent, int first, int last)
@@ -177,10 +196,11 @@ void QMultiModelTreePrivate::slotRowsInserted(const QModelIndex& parent, int fir
     slotAddRows(parent, first, last, model);
 }
 
-void QMultiModelTree::appendModel(QAbstractItemModel* model)
+QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model)
 {
-    if ((!model) || d_ptr->m_hModels[model]) return;
+    if ((!model) || d_ptr->m_hModels[model]) return {};
 
+    beginInsertRows({}, d_ptr->m_lRows.size(), d_ptr->m_lRows.size());
     d_ptr->m_hModels[model] = new InternalItem {
         d_ptr->m_lRows.size(),
         InternalItem::Mode::ROOT,
@@ -189,7 +209,14 @@ void QMultiModelTree::appendModel(QAbstractItemModel* model)
         {}
     };
     d_ptr->m_lRows << d_ptr->m_hModels[model];
+    endInsertRows();
 
     d_ptr->slotAddRows({}, 0, model->rowCount(), model);
+
+    //TODO connect to the model row moved/removed/reset
+    connect(model, &QAbstractItemModel::rowsInserted,
+        d_ptr, &QMultiModelTreePrivate::slotRowsInserted);
+
+    return index(rowCount()-1, 0);
 }
 

@@ -31,7 +31,7 @@ public:
     virtual QModelIndex mapFromSource(const QModelIndex& sourceIndex) const;
     virtual QModelIndex mapToSource(const QModelIndex& proxyIndex) const;
 
-    void appendModel(QAbstractItemModel* model);
+    QModelIndex appendModel(QAbstractItemModel* model);
 
 public:
     QMultiModelTreePrivate* d_ptr;
