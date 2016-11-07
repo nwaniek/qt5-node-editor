@@ -58,6 +58,8 @@ public:
 
     QGraphicsItem *graphicsItem() const;
 
+    QModelIndex index() const;
+
     GraphicsNode *source() const;
     GraphicsNode *sink() const;
 
@@ -65,8 +67,8 @@ Q_SIGNALS:
     void connectedTo(GraphicsNodeSocket* other);
 
 private:
-    explicit GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType socket_type, GraphicsNode *parent = nullptr);
-    GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType socket_type, const QString &text, GraphicsNode *parent = nullptr,QObject *data=0,int index=0);
+    explicit GraphicsNodeSocket(const QModelIndex& index, SocketType socket_type, GraphicsNode *parent = nullptr);
+    GraphicsNodeSocket(const QModelIndex& index, SocketType socket_type, const QString &text, GraphicsNode *parent = nullptr,QObject *data=0,int index2=0);
 
     GraphicsNodeSocketPrivate* d_ptr;
     Q_DECLARE_PRIVATE(GraphicsNodeSocket)

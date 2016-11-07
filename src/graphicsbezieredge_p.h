@@ -4,6 +4,7 @@
 #include <QGraphicsDropShadowEffect>
 
 class GraphicsEdgeItem;
+class QNodeEditorEdgeModel;
 
 class GraphicsDirectedEdgePrivate final
 {
@@ -25,6 +26,8 @@ public:
     GraphicsNodeSocket *_source {nullptr};
     GraphicsNodeSocket *_sink {nullptr};
 
+    QNodeEditorEdgeModel* m_pModel;
+
     // Helpers
     void setStart(int x0, int y0);
     void setStop(int x1, int y1);
@@ -35,15 +38,11 @@ public:
     void setStart(QPointF p);
     void setStop(QPointF p);
 
-    void connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid);
-    void connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink); //TODO make private
-
-    void connectSource(GraphicsNodeSocket *source);
-    void connectSink(GraphicsNodeSocket *sink);
-
     void disconnectBoth();
     void disconnectSink();
     void disconnectSource();
+
+    void connectIndex(GraphicsNodeSocket *other);
 };
 
 #endif

@@ -4,6 +4,8 @@
 #include "graphicsnodesocket.hpp"
 #include <QtWidgets/QGraphicsItem>
 
+#include <QtCore/QPersistentModelIndex>
+
 #define PEN_COLOR_CIRCLE      QColor("#FF000000")
 #define PEN_COLOR_TEXT        QColor("#FFFFFFFF")
 
@@ -41,6 +43,8 @@ public:
     GraphicsDirectedEdge *_edge {nullptr};
     QObject* m_data;
     int m_index;
+
+    QPersistentModelIndex m_PersistentIndex;
 
     const qreal _pen_width = 1.0;
     const qreal _circle_radius = 6.0;

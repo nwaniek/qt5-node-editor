@@ -26,6 +26,9 @@ QNodeView::QNodeView(QWidget* parent) : GraphicsNodeView(parent),
     d_ptr(new QNodeViewPrivate(this))
 {
     d_ptr->m_pFactory = new QNodeEditorSocketModel(&d_ptr->m_Proxy, &d_ptr->m_Scene);
+
+    m_pModel = d_ptr->m_pFactory; //HACK to remove
+
     d_ptr->m_Scene.setSceneRect(-32000, -32000, 64000, 64000);
     setScene(&d_ptr->m_Scene);
 }

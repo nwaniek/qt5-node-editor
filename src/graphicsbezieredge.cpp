@@ -7,11 +7,17 @@
 #include <QGraphicsPathItem>
 #include <QMetaProperty>
 
+#include <QtCore/QDebug>
+
 #include "graphicsnode.hpp"
 #include "graphicsnodesocket.hpp"
 
 #include "graphicsnodesocket_p.h"
 #include "graphicsbezieredge_p.h"
+
+#include "qreactiveproxymodel.h"
+
+#include "qnodeeditorsocketmodel.h"
 
 class GraphicsEdgeItem : public QGraphicsPathItem
 {
@@ -39,10 +45,11 @@ public:
 };
 
 GraphicsDirectedEdge::
-GraphicsDirectedEdge(const QPoint& start, const QPoint& stop, qreal factor)
+GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QPoint& start, const QPoint& stop, qreal factor)
 : QObject(), d_ptr(new GraphicsDirectedEdgePrivate(this))
 
 {
+    d_ptr->m_pModel = m;
     d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr);
     d_ptr->_start  = start;
     d_ptr->_stop   = stop;
@@ -57,14 +64,15 @@ GraphicsDirectedEdge(const QPoint& start, const QPoint& stop, qreal factor)
 }
 
 GraphicsDirectedEdge::
-GraphicsDirectedEdge(qreal factor)
-: GraphicsDirectedEdge({0, 0}, {0, 0}, factor) {}
+GraphicsDirectedEdge(QNodeEditorEdgeModel* m, qreal factor)
+: GraphicsDirectedEdge(m, {0, 0}, {0, 0}, factor) {}
 
 GraphicsDirectedEdge::
-GraphicsDirectedEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
-: GraphicsDirectedEdge({0, 0}, {0, 0}, factor)
+GraphicsDirectedEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
+: GraphicsDirectedEdge(m, {0, 0}, {0, 0}, factor)
 {
-    d_ptr->connect(source, sink);
+    d_ptr->connectIndex(source);
+    d_ptr->connectIndex(sink);
 }
 
 GraphicsNodeSocket *GraphicsDirectedEdge::
@@ -109,27 +117,6 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
     QGraphicsPathItem::mousePressEvent(event);
 }
 
-
-void GraphicsDirectedEdge::onSourceDataChange()
-{
-    // get Source Data
-
-    //TODO figure out this dead code
-    /*QObject* data1 = d_ptr->_source->d_ptr->m_data;
-    const QMetaObject* mo1 = data1->metaObject();
-    QMetaProperty mp1 = mo1->property(d_ptr->_source->d_ptr->m_index);
-    const char *name1 = mp1.name();
-
-    //auto var = data1->property(name1);
-
-    // set sink
-    QObject* data2 = d_ptr->_sink->d_ptr->m_data;
-    const QMetaObject* mo2 = data2->metaObject();
-    QMetaProperty mp2 = mo2->property(d_ptr->_sink->d_ptr->m_index);
-    const char * name2 = mp2.name();*/
-}
-
-
 void GraphicsDirectedEdgePrivate::
 setStart(int x0, int y0)
 {
@@ -173,36 +160,6 @@ setStop(QPoint p)
     m_pGrpahicsItem->updatePath();
 }
 
-
-void GraphicsDirectedEdgePrivate::
-connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
-{
-    if (_source)
-        q_ptr->QObject::disconnect(q_ptr,SLOT(onSourceDataChange()));
-
-    n1->connectSource(sourceid, q_ptr);
-    n2->connectSink(sinkid, q_ptr);
-
-    connectSource(n1->getSourceSocket(sourceid));
-    _sink = n2->getSinkSocket(sinkid);
-}
-
-
-void GraphicsDirectedEdgePrivate::
-connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
-{
-    if (_source) {
-        if (auto data = _source->d_ptr->m_data)
-            QObject::disconnect(data,0,q_ptr,0);
-    }
-
-    source->setEdge(q_ptr);
-    sink->setEdge(q_ptr);
-    _source = source;
-    _sink = sink;
-}
-
-
 void GraphicsDirectedEdgePrivate::
 disconnectBoth()
 {
@@ -230,54 +187,17 @@ disconnectSource()
     if (_source) {
         _source->setEdge(nullptr);
 
-        if (auto data = _source->d_ptr->m_data)
-            QObject::disconnect(data,0,q_ptr,0);
+        //if (auto data = _source->d_ptr->m_data)
+        //    QObject::disconnect(data,0,q_ptr,0);
     }
 }
 
-void GraphicsDirectedEdgePrivate::
-connectSink(GraphicsNodeSocket *sink)
-{
-    if (_sink) _sink->setEdge(nullptr);
-    _sink = sink;
-    if (_sink) _sink->setEdge(q_ptr);
-}
-
-
-void GraphicsDirectedEdgePrivate::
-connectSource(GraphicsNodeSocket *source)
-{
-    if (_source){
-        _source->setEdge(nullptr);
-
-        if (auto data = _source->d_ptr->m_data)
-            QObject::disconnect(data, 0, q_ptr, 0);
-    }
-
-    _source = source;
-
-    if (_source){
-        _source->setEdge(q_ptr);
-
-        if (auto data = _source->d_ptr->m_data) {
-            const QMetaObject* mo = data->metaObject();
-            QMetaProperty mp = mo->property(_source->d_ptr->m_index);
-            QMetaMethod notifySignal = mp.notifySignal();
-
-            int functionIndex = q_ptr->metaObject()->indexOfSlot("onSourceDataChange()");
-            QMetaMethod edgeInternalSlot = q_ptr->metaObject()->method(functionIndex);
-
-            QObject::connect(data, notifySignal, q_ptr, edgeInternalSlot);
-        }
-    }
-}
-
-GraphicsBezierEdge::GraphicsBezierEdge(qreal factor)
-    : GraphicsDirectedEdge(factor)
+GraphicsBezierEdge::GraphicsBezierEdge(QNodeEditorEdgeModel* m, qreal factor)
+    : GraphicsDirectedEdge(m, factor)
 { d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr); }
 
-GraphicsBezierEdge::GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
-    : GraphicsDirectedEdge(source, sink, factor)
+GraphicsBezierEdge::GraphicsBezierEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
+    : GraphicsDirectedEdge(m, source, sink, factor)
 { d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr); }
 
 void GraphicsBezierItem::
@@ -317,5 +237,45 @@ paint(QPainter * painter, const QStyleOptionGraphicsItem * /*option*/, QWidget *
 {
     painter->setPen(d_ptr->_pen);
     painter->drawPath(path());
+}
+
+void GraphicsDirectedEdgePrivate::connectIndex(GraphicsNodeSocket *other)
+{
+    if (!other)
+        return;
+
+    typedef GraphicsNodeSocket::SocketType ST; // for readability
+
+    qDebug() << "\n\n\nIN CONNECT INDEX" << q_ptr->source() << q_ptr->sink() << other;
+
+    // Both edge ends cannot have the same socket type
+    if (other->socketType() == ST::SINK && (!_source) && _sink)
+        return;
+
+    if (other->socketType() == ST::SOURCE && (!_sink) && _source)
+        return;
+
+    //TODO handle re-connection
+    if (_source && _sink)
+        return;
+
+    //FIXME react to the reactive model
+    switch(other->socketType()) {
+        case ST::SINK:
+            if (_sink) _sink->setEdge(nullptr); //TODO turn this into an helper function
+            _sink = other;
+            if (_sink) _sink->setEdge(q_ptr);
+            break;
+        case ST::SOURCE:
+            if (_source) _source->setEdge(nullptr);
+            _source = other;
+            if (_source) _source->setEdge(q_ptr);
+            break;
+    }
+
+    if ((!_sink) || (!_source))
+        return;
+
+    m_pModel->connectSocket(_source->index() , _sink->index());
 }
 

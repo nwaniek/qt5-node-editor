@@ -10,6 +10,8 @@ class GraphicsNodeSocket;
 
 class GraphicsDirectedEdgePrivate;
 
+class QNodeEditorEdgeModel;
+
 class GraphicsDirectedEdge : public QObject
 {
     friend class GraphicsNodeView; //To allow intermediate positions
@@ -18,7 +20,6 @@ class GraphicsDirectedEdge : public QObject
 
     Q_OBJECT
 public:
-    GraphicsDirectedEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
 
     virtual ~GraphicsDirectedEdge();
 
@@ -27,13 +28,11 @@ public:
 
     QGraphicsItem *graphicsItem() const;
 
-protected Q_SLOTS:
-    void onSourceDataChange(); // cant use QVariant argument, since it might be another type
-
 protected:
     // It cannot be constructed by itself or the user
-    explicit GraphicsDirectedEdge(qreal factor=0.5f);
-    GraphicsDirectedEdge(const QPoint& start, const QPoint& stop, qreal factor=0.5f);
+    explicit GraphicsDirectedEdge(QNodeEditorEdgeModel* m, qreal factor=0.5f);
+    GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QPoint& start, const QPoint& stop, qreal factor=0.5f); //TODO remove
+    GraphicsDirectedEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
 
     GraphicsDirectedEdgePrivate* d_ptr;
     Q_DECLARE_PRIVATE(GraphicsDirectedEdge)
@@ -43,10 +42,10 @@ class GraphicsBezierEdge : public GraphicsDirectedEdge
 {
     friend class GraphicsNodeView; //For the constructor
 public:
-    GraphicsBezierEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
 
 protected:
-    explicit GraphicsBezierEdge(qreal factor=0.5f);
+    GraphicsBezierEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
+    explicit GraphicsBezierEdge(QNodeEditorEdgeModel* m, qreal factor=0.5f);
 };
 
 #endif /* GRAPHICS_DIRECTED_EDGE_H */

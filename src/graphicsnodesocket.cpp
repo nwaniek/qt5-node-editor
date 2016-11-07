@@ -25,17 +25,19 @@
 #include "graphicsbezieredge_p.h"
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType type, GraphicsNode *parent)
-: GraphicsNodeSocket(model, type, QString(), parent)
+GraphicsNodeSocket(const QModelIndex& index, SocketType type, GraphicsNode *parent)
+: GraphicsNodeSocket(index, type, QString(), parent)
 { }
 
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(QNodeEditorSocketModel* model, SocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index)
+GraphicsNodeSocket(const QModelIndex& index, SocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index2)
 : QObject(), d_ptr(new GraphicsNodeSocketPrivate(this))
 {
     d_ptr->m_data  = data; //FIXME dead code 
-    d_ptr->m_index = index; //FIXME user QPersistentModelIndex
+    d_ptr->m_index = index2; //FIXME use QPersistentModelIndex
+
+    d_ptr->m_PersistentIndex = index;
 
     d_ptr->_socket_type = socket_type;
 
@@ -291,4 +293,12 @@ sink() const
 
     return d_ptr->_edge->sink()->d_ptr->_node;
 }
+
+
+QModelIndex GraphicsNodeSocket::
+index() const
+{
+    return d_ptr->m_PersistentIndex;
+}
+
 

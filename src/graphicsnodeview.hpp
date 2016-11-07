@@ -12,6 +12,9 @@ class GraphicsNode;
 class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
 
+//HACK this is totally *not* fine to put the architecture on its head
+class QNodeEditorEdgeModel; 
+class QNodeEditorSocketModel;
 
 struct EdgeDragEvent
 {
@@ -53,6 +56,8 @@ protected:
 	virtual void mouseReleaseEvent(QMouseEvent *event);
 	virtual void resizeEvent(QResizeEvent *event);
 
+    QNodeEditorSocketModel* m_pModel {nullptr}; //HACK evil workaround until the QAbstractItemView is added
+
 private:
 	void middleMouseButtonPress(QMouseEvent *event);
 	void leftMouseButtonPress(QMouseEvent *event);
@@ -73,6 +78,7 @@ private:
 
 	EdgeDragEvent *_drag_event = nullptr;
 	NodeResizeEvent *_resize_event = nullptr;
+
 };
 
 #endif /* __GRAPHICSNODEVIEW_HPP__59C6610F_3283_42A1_9102_38A7065DB718 */

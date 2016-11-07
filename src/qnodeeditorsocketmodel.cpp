@@ -7,6 +7,8 @@
 
 #include <QtCore/QDebug>
 
+#define REACTIVE_MODEL qobject_cast<QReactiveProxyModel*>(d_ptr->q_ptr->sourceModel())
+
 struct NodeWrapper
 {
     GraphicsNode* m_pNode;
@@ -25,6 +27,7 @@ class QNodeEditorSocketModelPrivate final : public QObject
 public:
     explicit QNodeEditorSocketModelPrivate(QObject* p) : QObject(p) {}
 
+    QNodeEditorEdgeModel m_EdgeModel {this};
     QVector<NodeWrapper*> m_lWrappers;
     GraphicsNodeScene* m_pScene;
 
@@ -44,9 +47,13 @@ public Q_SLOTS:
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
     QIdentityProxyModel(rmodel), d_ptr(new QNodeEditorSocketModelPrivate(this))
 {
+    Q_ASSERT(rmodel);
+
     d_ptr->q_ptr    = this;
     d_ptr->m_pScene = scene;
     setSourceModel(rmodel);
+
+    d_ptr->m_EdgeModel.setSourceModel(rmodel->connectionsModel());
 
     connect(this, &QAbstractItemModel::rowsInserted,
         d_ptr, &QNodeEditorSocketModelPrivate::slotRowsInserted);
@@ -59,6 +66,8 @@ QNodeEditorSocketModel::~QNodeEditorSocketModel()
 
 void QNodeEditorSocketModel::setSourceModel(QAbstractItemModel *sm)
 {
+    // This models can only work with a QReactiveProxyModel (no proxies)
+    Q_ASSERT(qobject_cast<QReactiveProxyModel*>(sm));
 
     QIdentityProxyModel::setSourceModel(sm);
 
@@ -133,6 +142,11 @@ GraphicsNodeSocket* QNodeEditorSocketModel::getSinkSocket(const QModelIndex& idx
 
     return nodew->m_lSinksToSrc.size() > idx.row() ?
         nodew->m_lSinksToSrc[idx.row()] : Q_NULLPTR;
+}
+
+QNodeEditorEdgeModel* QNodeEditorSocketModel::edgeModel() const
+{
+    return &d_ptr->m_EdgeModel;
 }
 
 void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, int first, int last)
@@ -218,7 +232,7 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
         // SOURCES
         if (idx.flags() & Qt::ItemIsDragEnabled) {
             auto s = new GraphicsNodeSocket(
-                q_ptr,
+                idx,
                 GraphicsNodeSocket::SocketType::SOURCE,
                 idx.data().toString(),
                 nodew->m_pNode,
@@ -236,7 +250,7 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
         // SINKS
         if (idx.flags() & (Qt::ItemIsDropEnabled | Qt::ItemIsEditable)) {
             auto s = new GraphicsNodeSocket(
-                q_ptr,
+                idx,
                 GraphicsNodeSocket::SocketType::SINK,
                 idx.data().toString(),
                 nodew->m_pNode,
@@ -268,4 +282,38 @@ void QNodeEditorSocketModelPrivate::removeSockets(const QModelIndex& parent, int
     Q_UNUSED(first)
     Q_UNUSED(last)
     //TODO
+}
+
+QNodeEditorEdgeModel::QNodeEditorEdgeModel(QNodeEditorSocketModelPrivate* parent)
+    : QIdentityProxyModel(parent), d_ptr(parent)
+{
+    
+}
+
+QNodeEditorEdgeModel::~QNodeEditorEdgeModel()
+{
+    
+}
+
+bool QNodeEditorEdgeModel::canConnect(const QModelIndex& idx1, const QModelIndex& idx2) const
+{
+    return true; //TODO
+}
+
+bool QNodeEditorEdgeModel::connectSocket(const QModelIndex& idx1, const QModelIndex& idx2)
+{
+    if (idx1.model() != d_ptr->q_ptr || idx2.model() != d_ptr->q_ptr)
+        return false;
+
+    auto m = REACTIVE_MODEL;
+
+    m->connectIndices(
+        d_ptr->q_ptr->mapToSource(idx1),
+        d_ptr->q_ptr->mapToSource(idx2)
+    );
+}
+
+QNodeEditorSocketModel* QNodeEditorEdgeModel::socketModel() const
+{
+    return d_ptr->q_ptr;
 }

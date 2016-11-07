@@ -10,6 +10,22 @@ class GraphicsNodeScene;
 
 class QNodeEditorSocketModelPrivate;
 
+//TODO move to a subclass
+class QNodeEditorEdgeModel : public QIdentityProxyModel
+{
+    Q_OBJECT
+public:
+    explicit QNodeEditorEdgeModel(QNodeEditorSocketModelPrivate* parent = Q_NULLPTR); //TODO make private
+    virtual ~QNodeEditorEdgeModel();
+
+    bool canConnect(const QModelIndex& idx1, const QModelIndex& idx2) const;
+    bool connectSocket(const QModelIndex& idx1, const QModelIndex& idx2);
+
+    QNodeEditorSocketModel* socketModel() const;
+
+private:
+    QNodeEditorSocketModelPrivate* d_ptr;
+};
 
 /**
  * Keeper/factory for the nodes and socket objects. This is the only place
@@ -24,7 +40,9 @@ class QNodeEditorSocketModelPrivate;
  */
 class QNodeEditorSocketModel : public QIdentityProxyModel
 {
+    Q_OBJECT
 public:
+
     explicit QNodeEditorSocketModel(
         QReactiveProxyModel* rmodel,
         GraphicsNodeScene* scene
@@ -36,6 +54,8 @@ public:
 
     int sourceSocketCount(const QModelIndex& idx) const;
     int sinkSocketCount(const QModelIndex& idx) const;
+
+    QNodeEditorEdgeModel* edgeModel() const;
 
     QVector<GraphicsNodeSocket*> getSourceSockets(const QModelIndex& idx) const;
     QVector<GraphicsNodeSocket*> getSinkSockets(const QModelIndex& idx) const;

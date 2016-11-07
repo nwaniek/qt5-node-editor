@@ -1,6 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 
 #include "graphicsnode.hpp"
+#include <QtCore/QDebug>
 #include <QPen>
 #include <QPainter>
 #include <QPainterPath>
@@ -276,27 +277,15 @@ void GraphicsNode::update()
     d_ptr->updateGeometry();
 }
 
-void GraphicsNode::
-connectSource(int i, GraphicsDirectedEdge *edge)
+QModelIndex GraphicsNode::index() const
 {
-    //FIXME
-//     const auto old_edge = d_ptr->_sources[i]->edge();
-//     d_ptr->_sources[i]->setEdge(edge);
+    return d_ptr->m_Index;
 }
 
-
-void GraphicsNode::
-connectSink(int i, GraphicsDirectedEdge *edge)
+QAbstractItemModel* GraphicsNode::model() const
 {
-    auto sink = d_ptr->m_pModel->getSinkSocket(
-        d_ptr->m_pModel->index(i, 0, d_ptr->m_Index)
-    );
-    Q_ASSERT(sink);
-
-    const auto old_edge = sink->edge();
-    sink->setEdge(edge);
+    return d_ptr->m_pModel;
 }
-
 
 void GraphicsNodePrivate::
 updateGeometry()
@@ -335,7 +324,6 @@ updateGeometry()
         ypos2 -= _item_padding;
     }
 
-
     // central widget
     if (_central_proxy) {
         _central_proxy->setGeometry({
@@ -349,24 +337,6 @@ updateGeometry()
     _changed = false;
     propagateChanges();
 }
-
-
-GraphicsNodeSocket* GraphicsNode::
-getSourceSocket(const size_t id) const
-{
-    return d_ptr->m_pModel->getSourceSocket(
-        d_ptr->m_pModel->index(id, 0, d_ptr->m_Index)
-    ); //TODO remove
-}
-
-GraphicsNodeSocket* GraphicsNode::
-getSinkSocket(const size_t id) const
-{
-    return d_ptr->m_pModel->getSinkSocket(
-        d_ptr->m_pModel->index(id, 0, d_ptr->m_Index)
-    ); //TODO remove
-}
-
 
 void GraphicsNode::
 setCentralWidget (QWidget *widget)

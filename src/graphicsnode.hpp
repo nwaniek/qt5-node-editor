@@ -15,6 +15,7 @@ class QGraphicsSceneMouseEvent;
 class QGraphicsTextItem;
 class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
+class QAbstractItemModel;
 
 class QNodeEditorSocketModel;
 
@@ -26,20 +27,7 @@ class GraphicsNode : public QObject
     Q_OBJECT
 
 public:
-//     GraphicsNodeSocket* addSink(const QString &text,QObject *data=0,int id=0);
-//     GraphicsNodeSocket* addSource(const QString &text,QObject *data=0,int id=0);
-
-//     void clearSink();
-//     void clearSource();
-
-    GraphicsNodeSocket* getSourceSocket(const size_t id) const;
-    GraphicsNodeSocket* getSinkSocket(const size_t id) const;
-
     QGraphicsItem *graphicsItem() const;
-
-    // connecting sources and sinks
-    void connectSource(int i, GraphicsDirectedEdge *edge);
-    void connectSink(int i, GraphicsDirectedEdge *edge);
 
     QSizeF size() const;
 
@@ -48,6 +36,9 @@ public:
     void setSize(const qreal width, const qreal height);
     void setSize(const QSizeF size);
     void setSize(const QPointF size);
+
+    QModelIndex index() const;
+    QAbstractItemModel* model() const;
 
     /**
         * set a regular QWidget as central widget
