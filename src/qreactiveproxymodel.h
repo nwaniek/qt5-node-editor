@@ -39,7 +39,7 @@ public:
 
     QAbstractItemModel *connectionsModel() const;
 
-    void connectIndices(const QModelIndex& source, const QModelIndex& destination);
+    bool connectIndices(const QModelIndex& source, const QModelIndex& destination);
     bool areConnected(const QModelIndex& source, const QModelIndex& destination) const;
 
     QList<QModelIndex> sendTo(const QModelIndex& source) const;

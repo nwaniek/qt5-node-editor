@@ -22,6 +22,8 @@ struct ConnectionHolder
 {
     QPersistentModelIndex source;
     QPersistentModelIndex destination;
+    void* sourceIP;
+    void* destinationIP;
 };
 
 class QReactiveProxyModelPrivate : public QObject
@@ -33,6 +35,10 @@ public:
     QHash<const QMimeData*, QPersistentModelIndex> m_hDraggedIndexCache;
     QVector<ConnectionHolder*> m_lConnections;
 
+    // In case dataChanged() contains a single QModelIndex, use this fast path
+    // to avoid doing a query on each connections or QModelIndex
+    QHash<void*, ConnectionHolder*> m_hDirectMapping;
+
     //Helper
     void clear();
 
@@ -43,13 +49,13 @@ public Q_SLOTS:
 QReactiveProxyModel::QReactiveProxyModel(QObject* parent) : QIdentityProxyModel(parent),
     d_ptr(new QReactiveProxyModelPrivate)
 {
-    
+    d_ptr->m_pConnectionModel = new ConnectedIndicesModel(this, d_ptr);
 }
 
 ConnectedIndicesModel::ConnectedIndicesModel(QObject* parent, QReactiveProxyModelPrivate* d)
     : QAbstractTableModel(parent), d_ptr(d)
 {
-    
+
 }
 
 QReactiveProxyModel::~QReactiveProxyModel()
@@ -156,16 +162,44 @@ QAbstractItemModel* QReactiveProxyModel::connectionsModel() const
     return d_ptr->m_pConnectionModel;
 }
 
-void QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModelIndex& destIdx)
+bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModelIndex& destIdx)
 {
+    if (!(srcIdx.isValid() && destIdx.isValid()))
+        return false;
+
+    if (srcIdx.model() != this || destIdx.model() != this) {
+        qWarning() << "Trying to connect QModelIndex from the wrong model";
+        return false;
+    }
+
     qDebug() << "CONNECING" << srcIdx << destIdx;
 
     auto conn = new ConnectionHolder {
         srcIdx,
-        destIdx
+        destIdx,
+        srcIdx.internalPointer(),
+        destIdx.internalPointer(),
     };
 
+    // Check if there is an internal pointer or UID, models can work without
+    // them, better not assume they exist. It is also not possible to assume
+    // they are valid or unique. This is checked when it is retrieved.
+    if (srcIdx.internalPointer())
+        d_ptr->m_hDirectMapping[ srcIdx.internalPointer () ] = conn;
+
+    if (destIdx.internalPointer())
+        d_ptr->m_hDirectMapping[ destIdx.internalPointer() ] = conn;
+
+    // Sync the current source value into the sink
+    setData(destIdx, srcIdx.data(Qt::DisplayRole) , Qt::DisplayRole);
+
+    // Register the connection
+    const int id = d_ptr->m_lConnections.size();
+    d_ptr->m_pConnectionModel->beginInsertRows({}, id, id);
     d_ptr->m_lConnections << conn;
+    d_ptr->m_pConnectionModel->endInsertRows();
+
+    return true;
 }
 
 bool QReactiveProxyModel::areConnected(const QModelIndex& source, const QModelIndex& destination) const
@@ -189,8 +223,22 @@ QList<QModelIndex> QReactiveProxyModel::receiveFrom(const QModelIndex& destinati
 
 QVariant ConnectedIndicesModel::data(const QModelIndex& idx, int role) const
 {
-    Q_UNUSED(idx)
-    Q_UNUSED(role)
+    if (!idx.isValid())
+        return {};
+
+    const auto conn = d_ptr->m_lConnections[idx.row()];
+
+    Q_ASSERT(conn);
+
+    switch(idx.column()) {
+        case 0:
+            return conn->source.data(role);
+        case 1:
+            return {}; //Eventually they will be named and have colors
+        case 2:
+            return conn->destination.data(role);
+    }
+
     return {};
 }
 
