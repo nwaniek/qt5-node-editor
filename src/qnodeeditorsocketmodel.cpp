@@ -7,6 +7,8 @@
 
 #include <QtCore/QDebug>
 
+#include "qobjectmodel.h" //TODO remove
+
 #define REACTIVE_MODEL qobject_cast<QReactiveProxyModel*>(d_ptr->q_ptr->sourceModel())
 
 struct NodeWrapper
@@ -48,6 +50,8 @@ QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, Gra
     QIdentityProxyModel(rmodel), d_ptr(new QNodeEditorSocketModelPrivate(this))
 {
     Q_ASSERT(rmodel);
+
+    rmodel->addConnectedRole(QObjectModel::Role::ValueRole);
 
     d_ptr->q_ptr    = this;
     d_ptr->m_pScene = scene;
