@@ -25,6 +25,7 @@ class QObjectModelPrivate;
 class QObjectModel : public QAbstractItemModel
 {
     Q_OBJECT
+    friend class PropertyChangeReceiver; // for createIndex()
 public:
     enum Capabilities : char {
         NONE   = 0 << 0,
@@ -54,7 +55,7 @@ public:
     virtual QModelIndex index(int row, int column, const QModelIndex& parent ={}) const override;
     virtual Qt::ItemFlags flags(const QModelIndex &idx) const override;
     virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
-
+    virtual QHash<int, QByteArray> roleNames() const override;
     virtual QModelIndex parent(const QModelIndex& idx) const override;
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 

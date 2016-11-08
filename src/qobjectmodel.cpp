@@ -14,13 +14,30 @@ const T& qAsConst(const T& v)
 
 struct InternalItem;
 
-// Instead of creating tons of lambdas, create a single receiver per property
-// identifier.
+// The reason why this isn't part of InternalItem is to reduce the number of
+// cache fault when displaying the model. It isn't possible to mix generic
+// QMetaMethod based connections with lambdas. Obviously, doing it this way
+// can potentially create many, many QObjects.
+//
+// One future optimization would be to have many slots per objects and keep
+// an internal mapping back to the right InternalItem.
+//
+// Another one would be to re-implement the low level signal emit catcher
+// and avoid all the QObject::connect.
 class PropertyChangeReceiver : public QObject
 {
+    Q_OBJECT
+public:
+    explicit PropertyChangeReceiver(QObjectModel* m, InternalItem* i, QObject* p, int sigIdx);
+
+    InternalItem* item;
+    QObjectModel* model;
+
 public Q_SLOTS:
-    
+    void changed();
+    void slotDestroyed();
 };
+
 
 class PropertyChangeReceiverFactory
 {
@@ -38,6 +55,7 @@ struct MetaPropertyColumnMapper
         const int        index;
         const int        metaType;
         const QByteArray name;
+        int              sigIdx;
     };
 
     const QMetaObject* m_pMetaObject;
@@ -50,9 +68,10 @@ private:
 
 struct InternalItem
 {
-    int m_Index;
-    QObject* m_pObject;
-    bool m_IsObjectRoot;
+    int           m_Index;
+    QObject*      m_pObject;
+    bool          m_IsObjectRoot;
+    QObjectModel* m_pModel;
     MetaPropertyColumnMapper::Property *m_pProp;
     QVector<InternalItem*> m_lColumns;
 
@@ -61,7 +80,7 @@ struct InternalItem
     }
 };
 
-class QObjectModelPrivate
+class QObjectModelPrivate final
 {
 public:
     bool m_IsHeterogeneous {false};
@@ -75,13 +94,12 @@ public:
     void clear();
     void regen();
     static MetaPropertyColumnMapper* getMapper(QObject*);
-
 };
 
 QHash<const QMetaObject*, MetaPropertyColumnMapper*> QObjectModelPrivate::m_hMapper;
 
 QObjectModel::QObjectModel(QObject* parent) : QAbstractItemModel(parent),
-d_ptr(new QObjectModelPrivate())
+d_ptr(new QObjectModelPrivate)
 {
 }
 
@@ -98,6 +116,22 @@ QObjectModel::~QObjectModel()
 {
     d_ptr->clear();
     delete d_ptr;
+}
+
+QHash<int, QByteArray> QObjectModel::roleNames() const
+{
+    static QHash<int, QByteArray> ret;
+
+    if (ret.isEmpty()) {
+        ret[ ValueRole        ] = "valueRole";
+        ret[ PropertyIdRole   ] = "propertyIdRole";
+        ret[ PropertyNameRole ] = "propertyNameRole";
+        ret[ CapabilitiesRole ] = "capabilitiesRole";
+        ret[ MetaTypeRole     ] = "metaTypeRole";
+        ret[ TypeNameRole     ] = "typeNameRole";
+    }
+
+    return ret;
 }
 
 QVariant QObjectModel::data(const QModelIndex& idx, int role) const
@@ -248,8 +282,6 @@ void QObjectModel::setReadOnly(bool value)
 
 void QObjectModel::addObject(QObject* obj)
 {
-    //FIXME handle when the object is deleted
-    //FIXME watch for property changes
     if (!obj) return;
 
     auto mapper = d_ptr->getMapper(obj);
@@ -261,6 +293,7 @@ void QObjectModel::addObject(QObject* obj)
         d_ptr->m_lRows.size(),
         obj,
         true,
+        this,
         mapper->m_lProperties[0],
         {}
     };
@@ -274,26 +307,37 @@ void QObjectModel::addObject(QObject* obj)
     beginInsertRows({}, list->size(), list->size()+mapper->m_lProperties.size()-2); //FIXME support columns
     for (auto p : qAsConst(mapper->m_lProperties)) {
         // Add the existing item to its own column to simplify the code elsewhere
-        (*list) << ((p==item->m_pProp) ? item : new InternalItem {
-            d_ptr->m_lRows.size(),
+        auto ip = ((p==item->m_pProp) ? item : new InternalItem {
+            d_ptr->m_lRows.size(), //FIXME this doesn't support columns
             obj,
             false,
+            this,
             p,
             {}
         });
+        (*list) << ip;
+
+        // The notify signal could be anything. It doesn't have to have an argument
+        // with the same QMetaType as the property. Even if it has, there is no way
+        // to know if it matches the property without trying to get it. So better
+        // just assume the arguments is irrelevant and use the getter. Note that it
+        // could be done using a custom qt_static_metacall, but again, it is a
+        // little pointless to implement.
+        if (p->sigIdx >= 0)
+            auto r = new PropertyChangeReceiver(this, ip, obj, p->sigIdx);
     }
     endInsertRows();
 }
 
 void QObjectModel::addObjects(const QVector<QObject*>& objs)
 {
-    for (auto o : objs)
+    for (auto o : qAsConst(objs))
         addObject(o);
 }
 
 void QObjectModel::addObjects(const QList<QObject*>& objs)
 {
-    for (auto o : objs)
+    for (auto o : qAsConst(objs))
         addObject(o);
 }
 
@@ -369,8 +413,43 @@ MetaPropertyColumnMapper* QObjectModelPrivate::getMapper(QObject* o)
             p.propertyIndex(),
             p.userType(),
             p.name(),
+            p.notifySignalIndex()
         };
     }
 
     return mapper;
 }
+
+// Setting the parent ensure the memory will be cleaned when `o` is destroyed.
+PropertyChangeReceiver::PropertyChangeReceiver(QObjectModel* m, InternalItem* i, QObject* p, int sigIdx)
+    : QObject(p), item(i), model(m)
+{
+    // Handle removing the item from this
+    if (i->m_IsObjectRoot)
+        connect(this, &QObject::destroyed,
+            this, &PropertyChangeReceiver::slotDestroyed);
+
+    connect(m, &QObject::destroyed, this, &QObject::deleteLater);
+
+    const auto notifySignal = p->metaObject()->method(sigIdx);
+
+    static int changedId = metaObject()->indexOfSlot("changed()");
+
+    const auto notifySlot = metaObject()->method(changedId);
+
+    QObject::connect(p, notifySignal, this, notifySlot);
+}
+
+void PropertyChangeReceiver::changed()
+{
+    const QModelIndex idx = model->createIndex(item->m_Index, 0, item); //FIXME this doesn't support columns
+
+    Q_EMIT model->dataChanged(idx, idx);
+}
+
+void PropertyChangeReceiver::slotDestroyed()
+{
+    //TODO emit the beginRemoveRows and delete the InternalItem
+}
+
+#include "qobjectmodel.moc"
