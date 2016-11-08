@@ -4,6 +4,15 @@
 #include <QtCore/QMimeData>
 #include <QtCore/QDebug>
 
+#if QT_VERSION < 0x050700
+//Q_FOREACH is deprecated and Qt CoW containers are detached on C++11 for loops
+template<typename T>
+const T& qAsConst(const T& v)
+{
+    return const_cast<const T&>(v);
+}
+#endif
+
 class ConnectedIndicesModel : public QAbstractTableModel
 {
     friend class QReactiveProxyModel;
@@ -41,21 +50,26 @@ public:
 
     //Helper
     void clear();
+    void synchronize(const QModelIndex& source, const QModelIndex& destination) const;
 
+    QReactiveProxyModel* q_ptr;
 public Q_SLOTS:
     void slotMimeDestroyed();
+    void slotDataChanged(const QModelIndex& tl, const QModelIndex& br);
 };
 
 QReactiveProxyModel::QReactiveProxyModel(QObject* parent) : QIdentityProxyModel(parent),
     d_ptr(new QReactiveProxyModelPrivate)
 {
+    d_ptr->q_ptr = this;
     d_ptr->m_pConnectionModel = new ConnectedIndicesModel(this, d_ptr);
 }
 
 ConnectedIndicesModel::ConnectedIndicesModel(QObject* parent, QReactiveProxyModelPrivate* d)
     : QAbstractTableModel(parent), d_ptr(d)
 {
-
+    connect(this, &QAbstractItemModel::dataChanged,
+        d_ptr, &QReactiveProxyModelPrivate::slotDataChanged);
 }
 
 QReactiveProxyModel::~QReactiveProxyModel()
@@ -99,6 +113,8 @@ bool QReactiveProxyModel::canDropMimeData(const QMimeData *data, Qt::DropAction 
 
 bool QReactiveProxyModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent)
 {
+    Q_UNUSED(action)
+
     if ((!data) || !data->hasFormat(d_ptr->MIME_TYPE))
         return false;
 
@@ -172,8 +188,6 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
         return false;
     }
 
-    qDebug() << "CONNECING" << srcIdx << destIdx;
-
     auto conn = new ConnectionHolder {
         srcIdx,
         destIdx,
@@ -185,13 +199,13 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
     // them, better not assume they exist. It is also not possible to assume
     // they are valid or unique. This is checked when it is retrieved.
     if (srcIdx.internalPointer())
-        d_ptr->m_hDirectMapping[ srcIdx.internalPointer () ] = conn;
+        d_ptr->m_hDirectMapping[ srcIdx.internalPointer () ] = conn; //FIXME this limits the number of connections to 1
 
     if (destIdx.internalPointer())
-        d_ptr->m_hDirectMapping[ destIdx.internalPointer() ] = conn;
+        d_ptr->m_hDirectMapping[ destIdx.internalPointer() ] = conn; //FIXME this limits the number of connections to 1
 
     // Sync the current source value into the sink
-    setData(destIdx, srcIdx.data(Qt::DisplayRole) , Qt::DisplayRole);
+    d_ptr->synchronize(srcIdx, destIdx);
 
     // Register the connection
     const int id = d_ptr->m_lConnections.size();
@@ -259,9 +273,47 @@ void QReactiveProxyModelPrivate::clear()
     }
 }
 
+void QReactiveProxyModelPrivate::synchronize(const QModelIndex& s, const QModelIndex& d) const
+{
+    if ((!s.isValid()) || !d.isValid())
+        return;
+
+    static const QVector<int> fallbackRole {Qt::DisplayRole};
+
+    const auto roles = m_lConnectedRoles.size() ? &m_lConnectedRoles : &(fallbackRole);
+
+    for (int role : qAsConst(*roles))
+        q_ptr->setData(d, s.data(role) , role);
+}
+
 void QReactiveProxyModelPrivate::slotMimeDestroyed()
 {
     // collect the garbage
     m_hDraggedIndexCache.remove(static_cast<QMimeData*>(QObject::sender()));
 
+}
+
+void QReactiveProxyModelPrivate::slotDataChanged(const QModelIndex& tl, const QModelIndex& br)
+{
+    // To avoid doing a foreach of the index matrix, this model ties to implement
+    // some "hacky" optimizations to keep the overhead low. There is 3 scenarios:
+    //
+    //  1) There is only 1 changed item. Then use the internal pointers has hash
+    //     keys.
+    //  2) The top_left...bottom_right is smaller than the number of connected
+    //     pairs. Then foreach the matrix
+    //  3) The matrix is larger than the number of connections. Then foreach
+    //     the connections. And use the `parent()` and `<=` `>=` operators.
+
+    // Only 1 item changed
+    if (tl == br) {
+        if (const auto conn = m_hDirectMapping[tl.internalPointer()]) {
+            Q_ASSERT(conn->source.isValid());
+            Q_ASSERT(conn->destination.isValid());
+
+            synchronize(conn->source, conn->destination);
+        }
+    }
+
+    //TODO implement scenario 2 and 3
 }

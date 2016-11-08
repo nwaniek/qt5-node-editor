@@ -39,8 +39,8 @@ public:
 
     QAbstractItemModel *connectionsModel() const;
 
-    bool connectIndices(const QModelIndex& source, const QModelIndex& destination);
-    bool areConnected(const QModelIndex& source, const QModelIndex& destination) const;
+    bool connectIndices(const QModelIndex& source, const QModelIndex& destination); //TODO add roles
+    bool areConnected(const QModelIndex& source, const QModelIndex& destination) const; //TODO add roles
 
     QList<QModelIndex> sendTo(const QModelIndex& source) const;
     QList<QModelIndex> receiveFrom(const QModelIndex& destination) const;
