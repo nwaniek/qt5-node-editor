@@ -32,6 +32,9 @@ public:
     void setStart(int x0, int y0);
     void setStop(int x1, int y1);
 
+//     void setStart(const QModelIndex& idx);
+//     void setStop(const QModelIndex& idx);
+
     void setStart(QPoint p);
     void setStop(QPoint p);
 

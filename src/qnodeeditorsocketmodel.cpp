@@ -2,6 +2,8 @@
 
 #include "graphicsnode.hpp"
 #include "graphicsnodescene.hpp"
+#include "graphicsbezieredge.hpp"
+#include "graphicsbezieredge_p.h"
 
 #include "qreactiveproxymodel.h"
 
@@ -29,9 +31,10 @@ class QNodeEditorSocketModelPrivate final : public QObject
 public:
     explicit QNodeEditorSocketModelPrivate(QObject* p) : QObject(p) {}
 
-    QNodeEditorEdgeModel m_EdgeModel {this};
+    QNodeEditorEdgeModel  m_EdgeModel {this};
     QVector<NodeWrapper*> m_lWrappers;
-    GraphicsNodeScene* m_pScene;
+    GraphicsNodeScene*    m_pScene;
+    GraphicsDirectedEdge* m_pConnectionCandidate {nullptr};
 
     // helper
     GraphicsNode* insertNode(int idx, const QString& title);
@@ -41,9 +44,16 @@ public:
     void updateSockets(const QModelIndex& parent, int first, int last);
     void removeSockets(const QModelIndex& parent, int first, int last);
 
+    GraphicsDirectedEdge* initiateConnectionFromSource(
+        const QModelIndex& index,
+        GraphicsNodeSocket::SocketType type,
+        const QPointF& point
+    );
+
     QNodeEditorSocketModel* q_ptr;
 public Q_SLOTS:
     void slotRowsInserted(const QModelIndex& parent, int first, int last);
+    void slotConnectionsInserted(const QModelIndex& parent, int first, int last);
 };
 
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
@@ -61,6 +71,9 @@ QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, Gra
 
     connect(this, &QAbstractItemModel::rowsInserted,
         d_ptr, &QNodeEditorSocketModelPrivate::slotRowsInserted);
+
+    connect(&d_ptr->m_EdgeModel, &QAbstractItemModel::rowsInserted,
+        d_ptr, &QNodeEditorSocketModelPrivate::slotConnectionsInserted);
 }
 
 QNodeEditorSocketModel::~QNodeEditorSocketModel()
@@ -78,6 +91,16 @@ void QNodeEditorSocketModel::setSourceModel(QAbstractItemModel *sm)
     //TODO clear (this can wait, it wont happen anyway)
 
     d_ptr->slotRowsInserted({}, 0, sourceModel()->rowCount() -1 );
+}
+
+GraphicsNodeScene* QNodeEditorSocketModel::scene() const
+{
+    return d_ptr->m_pScene;
+}
+
+GraphicsNodeScene* QNodeEditorEdgeModel::scene() const
+{
+    return d_ptr->m_pScene;
 }
 
 int QNodeEditorSocketModel::sourceSocketCount(const QModelIndex& idx) const
@@ -122,13 +145,17 @@ QVector<GraphicsNodeSocket*> QNodeEditorSocketModel::getSinkSockets(const QModel
 
 GraphicsNodeSocket* QNodeEditorSocketModel::getSourceSocket(const QModelIndex& idx)
 {
+    qDebug() <<"1";
     if (!idx.parent().isValid())
         return Q_NULLPTR;
+    qDebug() <<"2" << idx << d_ptr->m_lWrappers.size();
 
     const auto nodew = d_ptr->getNode(idx, true);
 
+    qDebug() <<"3";
     if (!nodew)
         return Q_NULLPTR;
+    qDebug() <<"4" << nodew->m_lSourcesToSrc.size() << idx.row() << nodew->m_lSourcesToSrc;
 
     return nodew->m_lSourcesToSrc.size() > idx.row() ?
         nodew->m_lSourcesToSrc[idx.row()] : Q_NULLPTR;
@@ -151,6 +178,47 @@ GraphicsNodeSocket* QNodeEditorSocketModel::getSinkSocket(const QModelIndex& idx
 QNodeEditorEdgeModel* QNodeEditorSocketModel::edgeModel() const
 {
     return &d_ptr->m_EdgeModel;
+}
+
+GraphicsDirectedEdge* QNodeEditorSocketModelPrivate::initiateConnectionFromSource( const QModelIndex& idx, GraphicsNodeSocket::SocketType type, const QPointF& point )
+{
+    if (!idx.parent().isValid()) {
+        qWarning() << "Cannot initiate an edge from an invalid node index";
+        return nullptr;
+    }
+
+    if (!m_pConnectionCandidate)
+        m_pConnectionCandidate = new GraphicsBezierEdge(q_ptr->edgeModel());
+
+    // There can only be one connection candidate at once.
+    m_pConnectionCandidate->d_ptr->disconnectBoth();
+
+    GraphicsNodeSocket* sock = nullptr;
+
+    switch(type) {
+        case GraphicsNodeSocket::SocketType::SINK:
+            sock = q_ptr->getSinkSocket(idx);
+            Q_ASSERT(sock);
+            m_pConnectionCandidate->d_ptr->setStart(point);
+            m_pConnectionCandidate->d_ptr->connectIndex(sock);
+        case GraphicsNodeSocket::SocketType::SOURCE:
+            sock = q_ptr->getSourceSocket(idx);
+            Q_ASSERT(sock);
+            m_pConnectionCandidate->d_ptr->connectIndex(sock);
+            m_pConnectionCandidate->d_ptr->setStop(point);
+    }
+
+    return m_pConnectionCandidate;
+}
+
+GraphicsDirectedEdge* QNodeEditorSocketModel::initiateConnectionFromSource(const QModelIndex& index, const QPointF& point)
+{
+    return d_ptr->initiateConnectionFromSource(index, GraphicsNodeSocket::SocketType::SOURCE, point);
+}
+
+GraphicsDirectedEdge* QNodeEditorSocketModel::initiateConnectionFromSink(const QModelIndex& index, const QPointF& point)
+{
+    return d_ptr->initiateConnectionFromSource(index, GraphicsNodeSocket::SocketType::SINK, point);
 }
 
 void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, int first, int last)
@@ -213,9 +281,9 @@ NodeWrapper* QNodeEditorSocketModelPrivate::getNode(const QModelIndex& idx, bool
     // source model is buggy (it will cause crashes later anyway) or this
     // code is (and in that case, the state is already corrupted, ignoring that
     // will cause garbage data to be shown/serialized).
-    Q_ASSERT(m_lWrappers.size() > idx.row());
+    Q_ASSERT(m_lWrappers.size() > i.row());
 
-    return m_lWrappers[idx.row()];
+    return m_lWrappers[i.row()];
 }
 
 void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int first, int last)
@@ -315,6 +383,13 @@ bool QNodeEditorEdgeModel::connectSocket(const QModelIndex& idx1, const QModelIn
         d_ptr->q_ptr->mapToSource(idx1),
         d_ptr->q_ptr->mapToSource(idx2)
     );
+}
+
+void QNodeEditorSocketModelPrivate::slotConnectionsInserted(const QModelIndex& parent, int first, int last)
+{
+    //TODO check if its the current candidate, then finish the connection
+    //TODO else create the new edge and connect it
+    //TODO support rows removed
 }
 
 QNodeEditorSocketModel* QNodeEditorEdgeModel::socketModel() const

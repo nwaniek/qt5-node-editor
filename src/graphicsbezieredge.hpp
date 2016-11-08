@@ -14,9 +14,11 @@ class QNodeEditorEdgeModel;
 
 class GraphicsDirectedEdge : public QObject
 {
+    //TODO once the point is stored in the index those 3 can go away
     friend class GraphicsNodeView; //To allow intermediate positions
-    friend class GraphicsNodeSocket; //To allow intermediate positions
     friend class GraphicsNodeSocketPrivate; //To allow intermediate positions
+
+    friend class QNodeEditorSocketModelPrivate; // to notify changes
 
     Q_OBJECT
 public:
@@ -25,6 +27,8 @@ public:
 
     GraphicsNodeSocket *source() const;
     GraphicsNodeSocket *sink() const;
+
+    void cancel();
 
     QGraphicsItem *graphicsItem() const;
 
@@ -40,7 +44,7 @@ protected:
 
 class GraphicsBezierEdge : public GraphicsDirectedEdge
 {
-    friend class GraphicsNodeView; //For the constructor
+    friend class QNodeEditorSocketModelPrivate; // to create
 public:
 
 protected:

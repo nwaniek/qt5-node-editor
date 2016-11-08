@@ -7,6 +7,7 @@
 class GraphicsNode;
 class QReactiveProxyModel;
 class GraphicsNodeScene;
+class GraphicsDirectedEdge;
 
 class QNodeEditorSocketModelPrivate;
 
@@ -20,6 +21,8 @@ public:
 
     bool canConnect(const QModelIndex& idx1, const QModelIndex& idx2) const;
     bool connectSocket(const QModelIndex& idx1, const QModelIndex& idx2);
+
+    GraphicsNodeScene* scene() const;
 
     QNodeEditorSocketModel* socketModel() const;
 
@@ -57,12 +60,18 @@ public:
 
     QNodeEditorEdgeModel* edgeModel() const;
 
+    GraphicsNodeScene* scene() const;
+
     QVector<GraphicsNodeSocket*> getSourceSockets(const QModelIndex& idx) const;
     QVector<GraphicsNodeSocket*> getSinkSockets(const QModelIndex& idx) const;
 
     GraphicsNode*       getNode(const QModelIndex& idx, bool recursive = false);
     GraphicsNodeSocket* getSourceSocket(const QModelIndex& idx);
     GraphicsNodeSocket* getSinkSocket(const QModelIndex& idx);
+
+    //TODO in later iterations of the API, add partial connections to the QNodeEditorEdgeModel
+    GraphicsDirectedEdge* initiateConnectionFromSource(const QModelIndex& index, const QPointF& point);
+    GraphicsDirectedEdge* initiateConnectionFromSink(const QModelIndex& index, const QPointF& point);
 
 private:
     QNodeEditorSocketModelPrivate* d_ptr;

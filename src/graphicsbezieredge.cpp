@@ -87,6 +87,11 @@ sink() const
     return d_ptr->_sink;
 }
 
+void GraphicsDirectedEdge::cancel()
+{
+    //TODO if the connection isn't fixed yet, then hide this
+}
+
 int GraphicsBezierItem::
 type() const
 {
