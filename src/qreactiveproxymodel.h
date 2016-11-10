@@ -2,6 +2,8 @@
 
 #include <QtCore/QIdentityProxyModel>
 
+class QAbstractProxyModel;
+
 class QReactiveProxyModelPrivate;
 
 /**
@@ -20,6 +22,17 @@ class QReactiveProxyModel : public QIdentityProxyModel
 {
     Q_OBJECT
 public:
+    enum ConnectionsRoles {
+        SOURCE_INDEX      = -1,
+        DESTINATION_INDEX = -1,
+    };
+
+    enum ConnectionsColumns {
+        SOURCE      = 0,
+        CONNECTION  = 1,
+        DESTINATION = 2,
+    };
+
     explicit QReactiveProxyModel(QObject* parent = Q_NULLPTR);
     virtual ~QReactiveProxyModel();
 
@@ -38,6 +51,9 @@ public:
     QVector<int> connectedRoles() const;
 
     QAbstractItemModel *connectionsModel() const;
+
+    QAbstractProxyModel* currentProxy() const;
+    void setCurrentProxy(QAbstractProxyModel* proxy);
 
     bool connectIndices(const QModelIndex& source, const QModelIndex& destination); //TODO add roles
     bool areConnected(const QModelIndex& source, const QModelIndex& destination) const; //TODO add roles

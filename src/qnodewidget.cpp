@@ -28,9 +28,6 @@ GraphicsNode* QNodeWidget::addObject(QObject* o, const QString& title)
 {
     auto m = new QObjectModel({o}, Qt::Vertical, QObjectModel::Role::PropertyNameRole, this);
 
-//     auto n = new Modelnode(m);
-
-    qDebug() << "\n\n\n\nAPPENDING!!!!";
     return addModel(m, title);
 }
 

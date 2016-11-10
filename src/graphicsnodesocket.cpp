@@ -7,6 +7,8 @@
 #include <QFont>
 #include <QFontMetrics>
 
+#include <QtCore/QDebug>
+
 #include <algorithm>
 
 #include "graphicsbezieredge.hpp"
@@ -230,7 +232,7 @@ setEdge(GraphicsDirectedEdge *edge)
     // TODO: handle edge conflict
     d_ptr->_edge = edge;
 
-    if (d_ptr->_edge) {
+    /*if (d_ptr->_edge) {
         switch (d_ptr->_socket_type) {
         case SocketType::SINK:
             Q_EMIT connectedTo(d_ptr->_edge->source());
@@ -239,7 +241,7 @@ setEdge(GraphicsDirectedEdge *edge)
             Q_EMIT connectedTo(d_ptr->_edge->sink());
             break;
         }
-    }
+    }*/
 
     d_ptr->notifyPositionChange();
 }
@@ -281,19 +283,22 @@ setText(const QString& t)
 GraphicsNode *GraphicsNodeSocket::
 source() const
 {
-    if ((!d_ptr->_edge) || (!d_ptr->_edge->source())) return nullptr;
-
-    return d_ptr->_edge->source()->d_ptr->_node;
+    return nullptr; //TODO remove or fix
 }
 
 GraphicsNode *GraphicsNodeSocket::
 sink() const
 {
-    if ((!d_ptr->_edge) || (!d_ptr->_edge->sink())) return nullptr;
-
-    return d_ptr->_edge->sink()->d_ptr->_node;
+    return nullptr; //TODO remove or fix
 }
 
+void GraphicsNodeSocketPrivate::update()
+{
+    auto m = const_cast<QAbstractItemModel*>(m_PersistentIndex.model());
+
+    if (m_PersistentIndex.model())
+        Q_EMIT m->dataChanged(m_PersistentIndex, m_PersistentIndex);
+}
 
 QModelIndex GraphicsNodeSocket::
 index() const

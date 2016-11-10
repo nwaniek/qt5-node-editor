@@ -25,18 +25,17 @@ public:
 
     virtual ~GraphicsDirectedEdge();
 
-    GraphicsNodeSocket *source() const;
-    GraphicsNodeSocket *sink() const;
-
     void cancel();
+    void update();
 
     QGraphicsItem *graphicsItem() const;
 
+    void setSink(const QModelIndex& idx);
+    void setSource(const QModelIndex& idx);
+
 protected:
     // It cannot be constructed by itself or the user
-    explicit GraphicsDirectedEdge(QNodeEditorEdgeModel* m, qreal factor=0.5f);
-    GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QPoint& start, const QPoint& stop, qreal factor=0.5f); //TODO remove
-    GraphicsDirectedEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
+    explicit GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor=0.5f);
 
     GraphicsDirectedEdgePrivate* d_ptr;
     Q_DECLARE_PRIVATE(GraphicsDirectedEdge)
@@ -48,8 +47,7 @@ class GraphicsBezierEdge : public GraphicsDirectedEdge
 public:
 
 protected:
-    GraphicsBezierEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor=0.5f);
-    explicit GraphicsBezierEdge(QNodeEditorEdgeModel* m, qreal factor=0.5f);
+    explicit GraphicsBezierEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor=0.5f);
 };
 
 #endif /* GRAPHICS_DIRECTED_EDGE_H */

@@ -32,6 +32,8 @@ public:
     */
     bool isInSocketCircle(const QPointF &p) const; //TODO move to the private class
 
+    void update();
+
     // Attributes
     GraphicsNodeSocket::SocketType _socket_type;
     QPen _pen_circle {PEN_COLOR_CIRCLE};

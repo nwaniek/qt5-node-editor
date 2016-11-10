@@ -259,8 +259,12 @@ itemChange(GraphicsItemChange change, const QVariant &value)
         setZValue(value.toBool() ? 1 : 0);
         break;
     case QGraphicsItem::ItemPositionChange:
-    case QGraphicsItem::ItemPositionHasChanged:
+    case QGraphicsItem::ItemPositionHasChanged: {
+        auto m = const_cast<QAbstractItemModel*>(d_ptr->m_Index.model());
+
+        m->setData(d_ptr->m_Index, QRectF(pos(), d_ptr->m_Size), Qt::SizeHintRole);
         d_ptr->propagateChanges();
+    }
         break;
 
     default:
@@ -310,6 +314,7 @@ updateGeometry()
 
         // sockets are centered around 0/0
         s->graphicsItem()->setPos(0, ypos1 + size.height()/2.0);
+        s->d_ptr->update();
         ypos1 += size.height() + _item_padding;
     }
 
@@ -321,6 +326,7 @@ updateGeometry()
 
         ypos2 -= size.height();
         s->graphicsItem()->setPos(m_Size.width(), ypos2 + size.height()/2.0);
+        s->d_ptr->update();
         ypos2 -= _item_padding;
     }
 

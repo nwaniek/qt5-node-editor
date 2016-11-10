@@ -24,6 +24,8 @@ struct NodeWrapper
     // Keep aligned with the node row
     QVector<GraphicsNodeSocket*> m_lSources;
     QVector<GraphicsNodeSocket*> m_lSinks;
+
+    QRectF m_SceneRect;
 };
 
 class QNodeEditorSocketModelPrivate final : public QObject
@@ -33,8 +35,8 @@ public:
 
     QNodeEditorEdgeModel  m_EdgeModel {this};
     QVector<NodeWrapper*> m_lWrappers;
+    QVector<GraphicsDirectedEdge*> m_lEdges;
     GraphicsNodeScene*    m_pScene;
-    GraphicsDirectedEdge* m_pConnectionCandidate {nullptr};
 
     // helper
     GraphicsNode* insertNode(int idx, const QString& title);
@@ -54,6 +56,7 @@ public:
 public Q_SLOTS:
     void slotRowsInserted(const QModelIndex& parent, int first, int last);
     void slotConnectionsInserted(const QModelIndex& parent, int first, int last);
+    void slotConnectionsChanged(const QModelIndex& tl, const QModelIndex& br);
 };
 
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
@@ -74,6 +77,11 @@ QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, Gra
 
     connect(&d_ptr->m_EdgeModel, &QAbstractItemModel::rowsInserted,
         d_ptr, &QNodeEditorSocketModelPrivate::slotConnectionsInserted);
+
+    connect(&d_ptr->m_EdgeModel, &QAbstractItemModel::dataChanged,
+        d_ptr, &QNodeEditorSocketModelPrivate::slotConnectionsChanged);
+
+    rmodel->setCurrentProxy(this);
 }
 
 QNodeEditorSocketModel::~QNodeEditorSocketModel()
@@ -91,6 +99,30 @@ void QNodeEditorSocketModel::setSourceModel(QAbstractItemModel *sm)
     //TODO clear (this can wait, it wont happen anyway)
 
     d_ptr->slotRowsInserted({}, 0, sourceModel()->rowCount() -1 );
+}
+
+bool QNodeEditorSocketModel::setData(const QModelIndex &idx, const QVariant &value, int role)
+{
+    if (!idx.isValid())
+        return false;
+
+    if (role == Qt::SizeHintRole && value.canConvert<QRectF>() && !idx.parent().isValid()) {
+        auto n = d_ptr->getNode(idx);
+        Q_ASSERT(n);
+        n->m_SceneRect = value.toRectF();
+
+        Q_EMIT dataChanged(idx, idx);
+
+        // All socket position also changed
+        const int cc = rowCount(idx);
+
+        if (cc)
+            Q_EMIT dataChanged(index(0,0,idx), index(cc -1, 0, idx));
+
+        return true;
+    }
+
+    return QIdentityProxyModel::setData(idx, value, role);
 }
 
 GraphicsNodeScene* QNodeEditorSocketModel::scene() const
@@ -145,17 +177,13 @@ QVector<GraphicsNodeSocket*> QNodeEditorSocketModel::getSinkSockets(const QModel
 
 GraphicsNodeSocket* QNodeEditorSocketModel::getSourceSocket(const QModelIndex& idx)
 {
-    qDebug() <<"1";
     if (!idx.parent().isValid())
         return Q_NULLPTR;
-    qDebug() <<"2" << idx << d_ptr->m_lWrappers.size();
 
     const auto nodew = d_ptr->getNode(idx, true);
 
-    qDebug() <<"3";
     if (!nodew)
         return Q_NULLPTR;
-    qDebug() <<"4" << nodew->m_lSourcesToSrc.size() << idx.row() << nodew->m_lSourcesToSrc;
 
     return nodew->m_lSourcesToSrc.size() > idx.row() ?
         nodew->m_lSourcesToSrc[idx.row()] : Q_NULLPTR;
@@ -187,28 +215,20 @@ GraphicsDirectedEdge* QNodeEditorSocketModelPrivate::initiateConnectionFromSourc
         return nullptr;
     }
 
-    if (!m_pConnectionCandidate)
-        m_pConnectionCandidate = new GraphicsBezierEdge(q_ptr->edgeModel());
+    const int last = q_ptr->edgeModel()->rowCount() - 1;
 
-    // There can only be one connection candidate at once.
-    m_pConnectionCandidate->d_ptr->disconnectBoth();
+    qDebug() << "CCCC" << last;
 
-    GraphicsNodeSocket* sock = nullptr;
-
-    switch(type) {
-        case GraphicsNodeSocket::SocketType::SINK:
-            sock = q_ptr->getSinkSocket(idx);
-            Q_ASSERT(sock);
-            m_pConnectionCandidate->d_ptr->setStart(point);
-            m_pConnectionCandidate->d_ptr->connectIndex(sock);
-        case GraphicsNodeSocket::SocketType::SOURCE:
-            sock = q_ptr->getSourceSocket(idx);
-            Q_ASSERT(sock);
-            m_pConnectionCandidate->d_ptr->connectIndex(sock);
-            m_pConnectionCandidate->d_ptr->setStop(point);
+    if (m_lEdges.size() <= last || !m_lEdges[last]) {
+        qDebug() << "\n\nBBBB" << last << m_lEdges.size();
+        m_lEdges.resize(std::max(m_lEdges.size(), last+1));
+        m_lEdges[last] = new GraphicsBezierEdge(
+            q_ptr->edgeModel(),
+            q_ptr->edgeModel()->index(last, 1)
+        );
     }
 
-    return m_pConnectionCandidate;
+    return m_lEdges[last];
 }
 
 GraphicsDirectedEdge* QNodeEditorSocketModel::initiateConnectionFromSource(const QModelIndex& index, const QPointF& point)
@@ -241,7 +261,6 @@ void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, 
 
 GraphicsNode* QNodeEditorSocketModelPrivate::insertNode(int idx, const QString& title)
 {
-    qDebug() << "\n\n\nIN INSERT NODE!!!" << idx;
     auto idx2 = q_ptr->index(idx, 0);
 
     Q_ASSERT(idx2.isValid());
@@ -385,11 +404,92 @@ bool QNodeEditorEdgeModel::connectSocket(const QModelIndex& idx1, const QModelIn
     );
 }
 
+// bool QNodeEditorEdgeModel::setData(const QModelIndex &index, const QVariant &value, int role)
+// {
+//     if (!index.isValid())
+//         return false;
+// 
+//     switch (role) {
+//         case Qt::SizeHintRole:
+//             break;
+//     }
+// 
+//     return QIdentityProxyModel::setData(index, value, role);
+// }
+
+QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
+{
+    if (!idx.isValid())
+        return {};
+
+    QModelIndex srcIdx = mapToSource(idx);
+
+
+    switch(idx.column()) {
+        case QReactiveProxyModel::ConnectionsColumns::SOURCE:
+            srcIdx = mapToSource(idx).data(QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX).toModelIndex();
+            break;
+        case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
+            srcIdx = mapToSource(idx).data(QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX).toModelIndex();
+            break;
+    }
+
+
+    auto sock = (!idx.column()) ?
+        d_ptr->q_ptr->getSourceSocket(srcIdx) : d_ptr->q_ptr->getSinkSocket(srcIdx);
+
+    if (sock && role == Qt::SizeHintRole) {
+        return sock->graphicsItem()->mapToScene(0,0);
+    }
+
+    return QIdentityProxyModel::data(idx, role);
+}
+
 void QNodeEditorSocketModelPrivate::slotConnectionsInserted(const QModelIndex& parent, int first, int last)
 {
-    //TODO check if its the current candidate, then finish the connection
-    //TODO else create the new edge and connect it
+    typedef QReactiveProxyModel::ConnectionsColumns Column;
+
+    auto srcSockI  = q_ptr->index(first, Column::SOURCE).data(
+        QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX
+    );
+    auto destSockI = q_ptr->index(first, Column::DESTINATION).data(
+        QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX
+    );
+
+    // If this happens, then the model is buggy or there is a race condition.
+    if ((!srcSockI.isValid()) && (!destSockI.isValid())) {
+        Q_ASSERT(false);
+        return;
+    }
+
     //TODO support rows removed
+
+    // Avoid pointless indentation
+    if (last > first)
+        slotConnectionsInserted(parent, ++first, last);
+}
+
+void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl, const QModelIndex& br)
+{
+    typedef QReactiveProxyModel::ConnectionsRoles CRole;
+
+
+    for (int i = tl.row(); i <= br.row(); i++) {
+        auto src  = m_EdgeModel.index(i, 0).data(CRole::SOURCE_INDEX     ).toModelIndex();
+        auto sink = m_EdgeModel.index(i, 2).data(CRole::DESTINATION_INDEX).toModelIndex();
+
+        // Empty connections don't need edges yet
+        if ((!src.isValid()) && (!sink.isValid()))
+            continue;
+
+        // Make sure the edge exists
+        if (m_lEdges.size()-1 <= i && !m_lEdges[i]) {
+            m_lEdges.resize(std::max(m_lEdges.size(), i+1));
+            m_lEdges[i] = new GraphicsBezierEdge(&m_EdgeModel, m_EdgeModel.index(i, 1));
+        }
+
+        m_lEdges[i]->update();
+    }
 }
 
 QNodeEditorSocketModel* QNodeEditorEdgeModel::socketModel() const

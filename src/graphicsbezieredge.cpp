@@ -45,15 +45,13 @@ public:
 };
 
 GraphicsDirectedEdge::
-GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QPoint& start, const QPoint& stop, qreal factor)
+GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor)
 : QObject(), d_ptr(new GraphicsDirectedEdgePrivate(this))
-
 {
     d_ptr->m_pModel = m;
+    d_ptr->m_Index  = index;
+    d_ptr->_factor  = factor;
     d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr);
-    d_ptr->_start  = start;
-    d_ptr->_stop   = stop;
-    d_ptr->_factor = factor;
 
     d_ptr->_pen.setWidth(2);
     d_ptr->m_pGrpahicsItem->setZValue(-1);
@@ -63,33 +61,14 @@ GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QPoint& start, const QPoint&
     d_ptr->m_pGrpahicsItem->setGraphicsEffect(d_ptr->_effect);
 }
 
-GraphicsDirectedEdge::
-GraphicsDirectedEdge(QNodeEditorEdgeModel* m, qreal factor)
-: GraphicsDirectedEdge(m, {0, 0}, {0, 0}, factor) {}
-
-GraphicsDirectedEdge::
-GraphicsDirectedEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
-: GraphicsDirectedEdge(m, {0, 0}, {0, 0}, factor)
-{
-    d_ptr->connectIndex(source);
-    d_ptr->connectIndex(sink);
-}
-
-GraphicsNodeSocket *GraphicsDirectedEdge::
-source() const
-{
-    return d_ptr->_source;
-}
-
-GraphicsNodeSocket *GraphicsDirectedEdge::
-sink() const
-{
-    return d_ptr->_sink;
-}
-
 void GraphicsDirectedEdge::cancel()
 {
     //TODO if the connection isn't fixed yet, then hide this
+}
+
+void GraphicsDirectedEdge::update()
+{
+    d_ptr->m_pGrpahicsItem->updatePath();
 }
 
 int GraphicsBezierItem::
@@ -123,35 +102,7 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 }
 
 void GraphicsDirectedEdgePrivate::
-setStart(int x0, int y0)
-{
-    setStart(QPoint(x0, y0));
-}
-
-
-void GraphicsDirectedEdgePrivate::
-setStop(int x1, int y1)
-{
-    setStop(QPoint(x1, y1));
-}
-
-
-void GraphicsDirectedEdgePrivate::
 setStart(QPointF p)
-{
-    setStart(p.toPoint());
-}
-
-
-void GraphicsDirectedEdgePrivate::
-setStop(QPointF p)
-{
-    setStop(p.toPoint());
-}
-
-
-void GraphicsDirectedEdgePrivate::
-setStart(QPoint p)
 {
     _start = p;
     m_pGrpahicsItem->updatePath();
@@ -159,76 +110,50 @@ setStart(QPoint p)
 
 
 void GraphicsDirectedEdgePrivate::
-setStop(QPoint p)
+setStop(QPointF p)
 {
     _stop = p;
     m_pGrpahicsItem->updatePath();
 }
 
-void GraphicsDirectedEdgePrivate::
-disconnectBoth()
+GraphicsBezierEdge::GraphicsBezierEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor)
+    : GraphicsDirectedEdge(m, index, factor)
 {
-    if (_source) {
-        _source->setEdge(nullptr);
-
-        if (auto data = _source->d_ptr->m_data)
-            QObject::disconnect(data,0,q_ptr,0);
-
-    }
-    if (_sink) _sink->setEdge(nullptr);
+    d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr);
 }
-
-
-void GraphicsDirectedEdgePrivate::
-disconnectSink()
-{
-    if (_sink) _sink->setEdge(nullptr);
-}
-
-
-void GraphicsDirectedEdgePrivate::
-disconnectSource()
-{
-    if (_source) {
-        _source->setEdge(nullptr);
-
-        //if (auto data = _source->d_ptr->m_data)
-        //    QObject::disconnect(data,0,q_ptr,0);
-    }
-}
-
-GraphicsBezierEdge::GraphicsBezierEdge(QNodeEditorEdgeModel* m, qreal factor)
-    : GraphicsDirectedEdge(m, factor)
-{ d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr); }
-
-GraphicsBezierEdge::GraphicsBezierEdge(QNodeEditorEdgeModel* m, GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
-    : GraphicsDirectedEdge(m, source, sink, factor)
-{ d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr); }
 
 void GraphicsBezierItem::
 updatePath()
 {
-    QPainterPath path(d_ptr->_start);
+
+    auto srcI  = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 0)
+        .data(Qt::SizeHintRole);
+    auto sinkI = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 2)
+        .data(Qt::SizeHintRole);
 
     // compute anchor point offsets
     const qreal min_dist = 0.f; //FIXME this is dead code? can the code below ever get negative?
 
-    const qreal dist = (d_ptr->_start.x() <= d_ptr->_stop.x()) ?
-        std::max(min_dist, (d_ptr->_stop.x() - d_ptr->_start.x()) * d_ptr->_factor):
-        std::max(min_dist, (d_ptr->_start.x() - d_ptr->_stop.x()) * d_ptr->_factor);
+    QPointF c1 = srcI.canConvert<QPointF>() ? srcI.toPointF() : d_ptr->_start;
 
-    const QPoint c1 {
-        d_ptr->_start.x() + dist,
-        d_ptr->_start.y()
-    };
+    QPointF c2 = sinkI.canConvert<QPointF>() ? sinkI.toPointF() : d_ptr->_stop;
 
-    const QPoint c2 {
-        d_ptr->_stop.x() - dist,
-        d_ptr->_stop.y()
-    };
+    const qreal dist = (c1.x() <= c2.x()) ?
+        std::max(min_dist, (c2.x() - c1.x()) * d_ptr->_factor):
+        std::max(min_dist, (c1.x() - c2.x()) * d_ptr->_factor);
 
-    path.cubicTo(c1, c2, d_ptr->_stop);
+    QPainterPath path(c1);
+
+    const auto c3 = c2;
+
+    c1.rx() += dist;
+    c2.rx() -= dist;
+
+    path.cubicTo(c1, c2, c3);
     setPath(path);
+
+    //FIXME technically, all edges currently are at {0,0}, they should be at c1
+    // This makes many "objects under cursor" call slow
 }
 
 int GraphicsEdgeItem::
@@ -238,49 +163,22 @@ type() const
 }
 
 void GraphicsBezierItem::
-paint(QPainter * painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/)
+paint(QPainter * painter, const QStyleOptionGraphicsItem * opt, QWidget *w)
 {
+    Q_UNUSED(opt)
+    Q_UNUSED(w)
     painter->setPen(d_ptr->_pen);
     painter->drawPath(path());
 }
 
-void GraphicsDirectedEdgePrivate::connectIndex(GraphicsNodeSocket *other)
+void GraphicsDirectedEdge::setSink(const QModelIndex& idx)
 {
-    if (!other)
-        return;
-
-    typedef GraphicsNodeSocket::SocketType ST; // for readability
-
-    qDebug() << "\n\n\nIN CONNECT INDEX" << q_ptr->source() << q_ptr->sink() << other;
-
-    // Both edge ends cannot have the same socket type
-    if (other->socketType() == ST::SINK && (!_source) && _sink)
-        return;
-
-    if (other->socketType() == ST::SOURCE && (!_sink) && _source)
-        return;
-
-    //TODO handle re-connection
-    if (_source && _sink)
-        return;
-
-    //FIXME react to the reactive model
-    switch(other->socketType()) {
-        case ST::SINK:
-            if (_sink) _sink->setEdge(nullptr); //TODO turn this into an helper function
-            _sink = other;
-            if (_sink) _sink->setEdge(q_ptr);
-            break;
-        case ST::SOURCE:
-            if (_source) _source->setEdge(nullptr);
-            _source = other;
-            if (_source) _source->setEdge(q_ptr);
-            break;
-    }
-
-    if ((!_sink) || (!_source))
-        return;
-
-    m_pModel->connectSocket(_source->index() , _sink->index());
+    const auto i = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 2);
+    d_ptr->m_pModel->setData(i, idx, QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX);
 }
 
+void GraphicsDirectedEdge::setSource(const QModelIndex& idx)
+{
+    const auto i = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 0);
+    d_ptr->m_pModel->setData(i, idx, QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX);
+}

@@ -1,6 +1,7 @@
 #include "qreactiveproxymodel.h"
 
 #include <QtCore/QAbstractTableModel>
+#include <QtCore/QAbstractProxyModel>
 #include <QtCore/QMimeData>
 #include <QtCore/QDebug>
 
@@ -20,6 +21,7 @@ public:
     ConnectedIndicesModel(QObject* parent, QReactiveProxyModelPrivate* d);
 
     virtual QVariant data(const QModelIndex& idx, int role) const override;
+    virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
     virtual int rowCount(const QModelIndex& parent = {}) const override;
     virtual int columnCount(const QModelIndex& parent = {}) const override;
 
@@ -29,6 +31,8 @@ private:
 
 struct ConnectionHolder
 {
+    int index;
+
     QPersistentModelIndex source;
     QPersistentModelIndex destination;
     void* sourceIP;
@@ -43,6 +47,8 @@ public:
     ConnectedIndicesModel* m_pConnectionModel;
     QHash<const QMimeData*, QPersistentModelIndex> m_hDraggedIndexCache;
     QVector<ConnectionHolder*> m_lConnections;
+
+    QAbstractProxyModel* m_pCurrentProxy {nullptr};
 
     // In case dataChanged() contains a single QModelIndex, use this fast path
     // to avoid doing a query on each connections or QModelIndex
@@ -63,13 +69,15 @@ QReactiveProxyModel::QReactiveProxyModel(QObject* parent) : QIdentityProxyModel(
 {
     d_ptr->q_ptr = this;
     d_ptr->m_pConnectionModel = new ConnectedIndicesModel(this, d_ptr);
+
+    connect(this, &QAbstractItemModel::dataChanged,
+        d_ptr, &QReactiveProxyModelPrivate::slotDataChanged);
 }
 
 ConnectedIndicesModel::ConnectedIndicesModel(QObject* parent, QReactiveProxyModelPrivate* d)
     : QAbstractTableModel(parent), d_ptr(d)
 {
-    connect(this, &QAbstractItemModel::dataChanged,
-        d_ptr, &QReactiveProxyModelPrivate::slotDataChanged);
+    
 }
 
 QReactiveProxyModel::~QReactiveProxyModel()
@@ -173,6 +181,33 @@ QVector<int> QReactiveProxyModel::connectedRoles() const
     return d_ptr->m_lConnectedRoles;
 }
 
+QAbstractProxyModel* QReactiveProxyModel::currentProxy() const
+{
+    return d_ptr->m_pCurrentProxy;
+}
+
+/**
+ *  Allow to set a proxy the connection model will listen to in order to be
+ * notified of item changes.
+ *
+ * This is useful to avoid having to expose the internal mapping. However, it
+ * isn't the prettyest workaround ever.
+ */
+void QReactiveProxyModel::setCurrentProxy(QAbstractProxyModel* proxy)
+{
+    auto cur = d_ptr->m_pCurrentProxy ? d_ptr->m_pCurrentProxy : this;
+
+    disconnect(cur, &QAbstractItemModel::dataChanged,
+        d_ptr, &QReactiveProxyModelPrivate::slotDataChanged);
+
+    d_ptr->m_pCurrentProxy = proxy;
+
+    cur = d_ptr->m_pCurrentProxy ? d_ptr->m_pCurrentProxy : this;
+
+    connect(cur, &QAbstractItemModel::dataChanged,
+        d_ptr, &QReactiveProxyModelPrivate::slotDataChanged);
+}
+
 QAbstractItemModel* QReactiveProxyModel::connectionsModel() const
 {
     return d_ptr->m_pConnectionModel;
@@ -188,7 +223,10 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
         return false;
     }
 
+    const int id = d_ptr->m_lConnections.size();
+
     auto conn = new ConnectionHolder {
+        id,
         srcIdx,
         destIdx,
         srcIdx.internalPointer(),
@@ -208,7 +246,6 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
     d_ptr->synchronize(srcIdx, destIdx);
 
     // Register the connection
-    const int id = d_ptr->m_lConnections.size();
     d_ptr->m_pConnectionModel->beginInsertRows({}, id, id);
     d_ptr->m_lConnections << conn;
     d_ptr->m_pConnectionModel->endInsertRows();
@@ -235,21 +272,96 @@ QList<QModelIndex> QReactiveProxyModel::receiveFrom(const QModelIndex& destinati
     return {}; //TODO
 }
 
+
+bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    Q_ASSERT((!index.isValid()) || index.model() == this); //TODO remove
+
+    if ((!index.isValid()) || index.model() != this || !value.canConvert<QModelIndex>())
+        return false;
+
+    // This model auto add rows
+    if (index.row() == d_ptr->m_lConnections.size())
+        d_ptr->m_lConnections << new ConnectionHolder {
+        d_ptr->m_lConnections.size(),
+        {},
+        {},
+        nullptr,
+        nullptr,
+    };
+
+    // First, given is a random QModelIndex, it might be in an anonymous proxy.
+    // Usually, those are rejected, but here is would void some valid use cases.
+
+    auto i = value.toModelIndex();
+
+    while (i.isValid()
+        && i.model() != d_ptr->q_ptr
+        && qobject_cast<const QAbstractProxyModel*>(i.model())
+    ) {
+        i = qobject_cast<const QAbstractProxyModel*>(i.model())->mapToSource(i);
+    }
+
+    // `i` can be invalid (to disconnect)
+    Q_ASSERT((!i.isValid()) || i.model() == d_ptr->q_ptr);
+
+    const auto conn = d_ptr->m_lConnections[index.row()];
+
+    switch (role) {
+        case QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX: // also DEST
+            Q_ASSERT(index.column() != 1);
+            if (index.column() == QReactiveProxyModel::ConnectionsColumns::SOURCE) {
+                d_ptr->m_hDirectMapping.remove(conn->sourceIP);
+                conn->source = i;
+
+                if (i.isValid()) {
+                    conn->sourceIP = i.internalPointer();
+                    d_ptr->m_hDirectMapping[i.internalPointer()] = conn;
+                }
+                d_ptr->synchronize(conn->source, conn->destination);
+            }
+            else if (index.column() == QReactiveProxyModel::ConnectionsColumns::DESTINATION) {
+                d_ptr->m_hDirectMapping.remove(conn->destinationIP);
+                conn->destination = i;
+
+                if (i.isValid()) {
+                    conn->destinationIP = i.internalPointer();
+                    d_ptr->m_hDirectMapping[i.internalPointer()] = conn;
+                }
+                d_ptr->synchronize(conn->source, conn->destination);
+
+                //FIXME this may require a beginInsertRows
+            }
+            return true;
+    }
+
+    return false;
+}
+
 QVariant ConnectedIndicesModel::data(const QModelIndex& idx, int role) const
 {
-    if (!idx.isValid())
+    if ((!idx.isValid()) || d_ptr->m_lConnections.size() <= idx.row())
         return {};
 
     const auto conn = d_ptr->m_lConnections[idx.row()];
 
     Q_ASSERT(conn);
 
+    if (role == QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX) {
+        switch(idx.column()) {
+            case QReactiveProxyModel::ConnectionsColumns::SOURCE:
+                return conn->source;
+            case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
+                return conn->destination;
+        }
+    }
+
     switch(idx.column()) {
-        case 0:
+        case QReactiveProxyModel::ConnectionsColumns::SOURCE:
             return conn->source.data(role);
-        case 1:
+        case QReactiveProxyModel::ConnectionsColumns::CONNECTION:
             return {}; //Eventually they will be named and have colors
-        case 2:
+        case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
             return conn->destination.data(role);
     }
 
@@ -258,7 +370,12 @@ QVariant ConnectedIndicesModel::data(const QModelIndex& idx, int role) const
 
 int ConnectedIndicesModel::rowCount(const QModelIndex& parent) const
 {
-    return parent.isValid() ? 0 : d_ptr->m_lConnections.size();
+    const bool hasLast = d_ptr->m_lConnections.size() && !(
+        d_ptr->m_lConnections.last()->destinationIP
+            || d_ptr->m_lConnections.last()->sourceIP
+    );
+
+    return parent.isValid() ? 0 : d_ptr->m_lConnections.size() + (hasLast?0:1);
 }
 
 int ConnectedIndicesModel::columnCount(const QModelIndex& parent) const
@@ -295,6 +412,9 @@ void QReactiveProxyModelPrivate::slotMimeDestroyed()
 
 void QReactiveProxyModelPrivate::slotDataChanged(const QModelIndex& tl, const QModelIndex& br)
 {
+    if (!tl.isValid())
+        return;
+
     // To avoid doing a foreach of the index matrix, this model ties to implement
     // some "hacky" optimizations to keep the overhead low. There is 3 scenarios:
     //
@@ -304,7 +424,6 @@ void QReactiveProxyModelPrivate::slotDataChanged(const QModelIndex& tl, const QM
     //     pairs. Then foreach the matrix
     //  3) The matrix is larger than the number of connections. Then foreach
     //     the connections. And use the `parent()` and `<=` `>=` operators.
-
     // Only 1 item changed
     if (tl == br) {
         if (const auto conn = m_hDirectMapping[tl.internalPointer()]) {
@@ -312,8 +431,22 @@ void QReactiveProxyModelPrivate::slotDataChanged(const QModelIndex& tl, const QM
             Q_ASSERT(conn->destination.isValid());
 
             synchronize(conn->source, conn->destination);
+
+            Q_EMIT m_pConnectionModel->dataChanged(
+                m_pConnectionModel->index(conn->index, 0),
+                m_pConnectionModel->index(conn->index, 2)
+            );
         }
     }
+    else {
+        //TODO make this faster...
 
-    //TODO implement scenario 2 and 3
+        for (int i = tl.row(); i <= br.row(); i++)
+            for (int j = tl.column(); j <= br.column(); j++) {
+                const auto idx = tl.model()->index(i, j, tl.parent());
+                slotDataChanged(idx, idx);
+            }
+    }
+
+    //TODO implement scenario 3
 }

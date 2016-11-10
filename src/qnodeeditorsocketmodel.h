@@ -19,6 +19,9 @@ public:
     explicit QNodeEditorEdgeModel(QNodeEditorSocketModelPrivate* parent = Q_NULLPTR); //TODO make private
     virtual ~QNodeEditorEdgeModel();
 
+//     virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    virtual QVariant data(const QModelIndex& idx, int role) const override;
+
     bool canConnect(const QModelIndex& idx1, const QModelIndex& idx2) const;
     bool connectSocket(const QModelIndex& idx1, const QModelIndex& idx2);
 
@@ -53,6 +56,7 @@ public:
 
     virtual ~QNodeEditorSocketModel();
 
+    virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
     virtual void setSourceModel(QAbstractItemModel *sourceModel) override;
 
     int sourceSocketCount(const QModelIndex& idx) const;

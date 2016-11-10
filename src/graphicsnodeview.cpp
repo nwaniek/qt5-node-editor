@@ -117,15 +117,17 @@ leftMouseButtonRelease(QMouseEvent *event)
 
 		if (!sock || !can_accept_edge(sock)) {
 			scene()->removeItem(_drag_event->e->graphicsItem());
-			_drag_event->e->d_ptr->disconnectBoth();
+// 			_drag_event->e->d_ptr->disconnectBoth(); //FIXME use the connectionmodel
 			_drag_event->e->cancel();
 		} else {
 			switch (_drag_event->mode) {
 			case EdgeDragEvent::move_to_source:
 			case EdgeDragEvent::connect_to_source:
+				_drag_event->e->setSource(sock->index());
+				break;
 			case EdgeDragEvent::move_to_sink:
 			case EdgeDragEvent::connect_to_sink:
-				_drag_event->e->d_ptr->connectIndex(sock);
+				_drag_event->e->setSink(sock->index());
 				break;
 			}
 
@@ -248,11 +250,11 @@ leftMouseButtonPress(QMouseEvent *event)
 			if ((_tmp_edge = sock->edge())) {
 				_drag_event->e = _tmp_edge;
 				if (sock->socketType() == GraphicsNodeSocket::SocketType::SINK) {
-					_drag_event->e->d_ptr->disconnectSink();
+					_drag_event->e->setSink(sock->index());
 					_drag_event->e->d_ptr->setStop(mapToScene(event->pos()));
 					_drag_event->mode = EdgeDragEvent::move_to_sink;
 				} else {
-					_drag_event->e->d_ptr->disconnectSource();
+					_drag_event->e->setSource(sock->index());
 					_drag_event->e->d_ptr->setStart(mapToScene(event->pos()));
 					_drag_event->mode = EdgeDragEvent::move_to_source;
 				}
@@ -260,10 +262,12 @@ leftMouseButtonPress(QMouseEvent *event)
 			else {
 				if (sock->socketType() == GraphicsNodeSocket::SocketType::SINK) {
 					_drag_event->e = m_pModel->initiateConnectionFromSink(sock->index(),mapToScene(event->pos()));
+					_drag_event->e->setSink(sock->index());
 					_drag_event->mode = EdgeDragEvent::connect_to_source;
 				}
 				else {
 					_drag_event->e = m_pModel->initiateConnectionFromSource(sock->index(),mapToScene(event->pos()));
+					_drag_event->e->setSource(sock->index());
 					_drag_event->mode = EdgeDragEvent::connect_to_sink;
 				}
 				scene()->addItem(_drag_event->e->graphicsItem());
