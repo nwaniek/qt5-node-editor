@@ -32,8 +32,6 @@ public:
 
     void setStart(QPointF p);
     void setStop(QPointF p);
-
-//     void connectIndex(GraphicsNodeSocket *other, GraphicsNodeSocket::SocketType st);
 };
 
 #endif

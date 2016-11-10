@@ -35,9 +35,6 @@ public:
     QString _text;
     GraphicsNode *_node;
 
-    QObject* m_data;
-    int m_index;
-
     QPersistentModelIndex m_PersistentIndex;
     QPersistentModelIndex m_EdgeIndex;
 

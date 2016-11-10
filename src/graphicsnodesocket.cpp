@@ -38,9 +38,6 @@ GraphicsNodeSocket::
 GraphicsNodeSocket(const QModelIndex& index, SocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index2)
 : QObject(), d_ptr(new GraphicsNodeSocketPrivate(this))
 {
-    d_ptr->m_data  = data; //FIXME dead code 
-    d_ptr->m_index = index2; //FIXME use QPersistentModelIndex
-
     d_ptr->m_PersistentIndex = index;
 
     d_ptr->_socket_type = socket_type;

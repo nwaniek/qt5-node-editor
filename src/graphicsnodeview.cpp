@@ -323,14 +323,12 @@ middleMouseButtonPress(QMouseEvent *event)
 bool GraphicsNodeView::
 can_accept_edge(GraphicsNodeSocket *sock)
 {
-	if (sock && _drag_event
-	&&((sock->isSink() && _drag_event->mode == EdgeDragEvent::move_to_sink)
-	|| (sock->isSink() && _drag_event->mode == EdgeDragEvent::connect_to_sink)
-	|| (sock->isSource() && _drag_event->mode == EdgeDragEvent::connect_to_source)
-	|| (sock->isSource() && _drag_event->mode == EdgeDragEvent::move_to_source)))
-		return true;
-
-	return false;
+    return sock && _drag_event &&(
+         (sock->isSink  () && _drag_event->mode == EdgeDragEvent::move_to_sink     )
+      || (sock->isSink  () && _drag_event->mode == EdgeDragEvent::connect_to_sink  )
+      || (sock->isSource() && _drag_event->mode == EdgeDragEvent::connect_to_source)
+      || (sock->isSource() && _drag_event->mode == EdgeDragEvent::move_to_source   )
+    );
 }
 
 
