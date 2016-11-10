@@ -19,6 +19,8 @@
 
 #include "qnodeeditorsocketmodel.h"
 
+#include "qreactiveproxymodel.h"
+
 #define BRUSH_COLOR_SINK      QColor("#FF0077FF")
 #define BRUSH_COLOR_SOURCE    QColor("#FFFF7700")
 #define TEXT_ALIGNMENT_SINK   Qt::AlignLeft
@@ -227,46 +229,23 @@ mousePressEvent(QGraphicsSceneMouseEvent *event)
 * set the edge for this socket
 */
 void GraphicsNodeSocket::
-setEdge(GraphicsDirectedEdge *edge)
+setEdge(const QModelIndex& idx)
 {
-    // TODO: handle edge conflict
-    d_ptr->_edge = edge;
-
-    /*if (d_ptr->_edge) {
-        switch (d_ptr->_socket_type) {
-        case SocketType::SINK:
-            Q_EMIT connectedTo(d_ptr->_edge->source());
-            break;
-        case SocketType::SOURCE:
-            Q_EMIT connectedTo(d_ptr->_edge->sink());
-            break;
-        }
-    }*/
-
-    d_ptr->notifyPositionChange();
+    d_ptr->m_EdgeIndex = idx;
 }
 
-void GraphicsNodeSocketPrivate::
-notifyPositionChange()
-{
-    if (!_edge) return;
-
-    switch (_socket_type) {
-    case GraphicsNodeSocket::SocketType::SINK:
-        _edge->d_ptr->setStop(m_pGraphicsItem->mapToScene(0,0));
-        break;
-    case GraphicsNodeSocket::SocketType::SOURCE:
-        _edge->d_ptr->setStart(m_pGraphicsItem->mapToScene(0,0));
-        break;
-    }
-}
-
-GraphicsDirectedEdge* GraphicsNodeSocket::
+QModelIndex GraphicsNodeSocket::
 edge() const
 {
-    return d_ptr->_edge;
+    return d_ptr->m_EdgeIndex;
 }
 
+bool GraphicsNodeSocket::isConnected() const
+{
+    return d_ptr->m_EdgeIndex.data(
+        QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX
+    ).toModelIndex().isValid();
+}
 
 QString GraphicsNodeSocket::
 text() const

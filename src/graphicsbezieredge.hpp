@@ -43,7 +43,7 @@ protected:
 
 class GraphicsBezierEdge : public GraphicsDirectedEdge
 {
-    friend class QNodeEditorSocketModelPrivate; // to create
+    friend class EdgeWrapper; // to create
 public:
 
 protected:

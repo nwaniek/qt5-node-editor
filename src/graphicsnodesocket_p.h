@@ -16,13 +16,6 @@ class GraphicsNodeSocketPrivate
 public:
     explicit GraphicsNodeSocketPrivate(GraphicsNodeSocket* q) : q_ptr(q) {}
 
-    /**
-    * notify the socket that its position has changed. this may be either
-    * due to movement within the parent, or due to movement of the parent
-    * within the parent's parent context.
-    */
-    void notifyPositionChange(); //TODO turn into a slot, move to the private class
-
     // return the anchor position relative to the scene in which the socket
     // is living in
     QPointF sceneAnchorPos() const; //TODO move to the private class
@@ -42,11 +35,11 @@ public:
     QString _text;
     GraphicsNode *_node;
 
-    GraphicsDirectedEdge *_edge {nullptr};
     QObject* m_data;
     int m_index;
 
     QPersistentModelIndex m_PersistentIndex;
+    QPersistentModelIndex m_EdgeIndex;
 
     const qreal _pen_width = 1.0;
     const qreal _circle_radius = 6.0;

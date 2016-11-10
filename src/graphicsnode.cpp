@@ -79,7 +79,6 @@ public:
     // Helpers
     void updateGeometry();
     void updateSizeHints();
-    void propagateChanges();
 
     GraphicsNode* q_ptr;
 };
@@ -263,7 +262,6 @@ itemChange(GraphicsItemChange change, const QVariant &value)
         auto m = const_cast<QAbstractItemModel*>(d_ptr->m_Index.model());
 
         m->setData(d_ptr->m_Index, QRectF(pos(), d_ptr->m_Size), Qt::SizeHintRole);
-        d_ptr->propagateChanges();
     }
         break;
 
@@ -341,7 +339,6 @@ updateGeometry()
     }
 
     _changed = false;
-    propagateChanges();
 }
 
 void GraphicsNode::
@@ -410,15 +407,4 @@ updateSizeHints() {
         std::max(min_width, _hard_min_width  ),
         std::max(min_height, _hard_min_height)
     };
-}
-
-
-void GraphicsNodePrivate::
-propagateChanges()
-{
-    for (auto s : qAsConst(m_pModel->getSinkSockets(m_Index)))
-        s->d_ptr->notifyPositionChange();
-
-    for (auto s : qAsConst(m_pModel->getSourceSockets(m_Index)))
-        s->d_ptr->notifyPositionChange();
 }

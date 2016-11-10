@@ -69,13 +69,6 @@ private:
 	GraphicsNodeSocket* socket_at(QPoint pos);
 
 private:
-	bool _panning;
-	QPoint _pan_cursor_pos;
-
-	GraphicsDirectedEdge *_tmp_edge;
-	GraphicsNodeSocket *_sock_source;
-	GraphicsNodeSocket *_sock_sink;
-
 	EdgeDragEvent *_drag_event = nullptr;
 	NodeResizeEvent *_resize_event = nullptr;
 

@@ -42,8 +42,8 @@ public:
         SOURCE
     };
 
-    GraphicsDirectedEdge *edge() const;
-    void setEdge(GraphicsDirectedEdge *edge);
+    QModelIndex edge() const;
+    void setEdge(const QModelIndex& index);
 
     QString text() const;
     void setText(const QString& text);
@@ -57,6 +57,8 @@ public:
     QSizeF minimalSize() const;
 
     QGraphicsItem *graphicsItem() const;
+
+    bool isConnected() const;
 
     QModelIndex index() const;
 

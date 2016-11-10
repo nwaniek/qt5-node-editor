@@ -73,6 +73,9 @@ public:
     GraphicsNodeSocket* getSourceSocket(const QModelIndex& idx);
     GraphicsNodeSocket* getSinkSocket(const QModelIndex& idx);
 
+    GraphicsDirectedEdge* getSourceEdge(const QModelIndex& idx);
+    GraphicsDirectedEdge* getSinkEdge(const QModelIndex& idx);
+
     //TODO in later iterations of the API, add partial connections to the QNodeEditorEdgeModel
     GraphicsDirectedEdge* initiateConnectionFromSource(const QModelIndex& index, const QPointF& point);
     GraphicsDirectedEdge* initiateConnectionFromSink(const QModelIndex& index, const QPointF& point);

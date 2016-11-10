@@ -26,10 +26,6 @@ GraphicsNodeView::GraphicsNodeView(QWidget *parent)
 
 GraphicsNodeView::GraphicsNodeView(QGraphicsScene *scene, QWidget *parent)
 : QGraphicsView(scene, parent)
-, _panning(false)
-, _tmp_edge(nullptr)
-, _sock_source(nullptr)
-, _sock_sink(nullptr)
 {
 	setRenderHints(QPainter::Antialiasing |
 			QPainter::TextAntialiasing |
@@ -117,7 +113,8 @@ leftMouseButtonRelease(QMouseEvent *event)
 
 		if (!sock || !can_accept_edge(sock)) {
 			scene()->removeItem(_drag_event->e->graphicsItem());
-// 			_drag_event->e->d_ptr->disconnectBoth(); //FIXME use the connectionmodel
+			_drag_event->e->setSource({});
+			_drag_event->e->setSink({});
 			_drag_event->e->cancel();
 		} else {
 			switch (_drag_event->mode) {
@@ -247,31 +244,32 @@ leftMouseButtonPress(QMouseEvent *event)
 
 			// initialize a new drag mode event
 			_drag_event = new EdgeDragEvent();
-			if ((_tmp_edge = sock->edge())) {
-				_drag_event->e = _tmp_edge;
-				if (sock->socketType() == GraphicsNodeSocket::SocketType::SINK) {
+
+			if (sock->socketType() == GraphicsNodeSocket::SocketType::SINK) {
+				if (_drag_event->e = m_pModel->getSinkEdge(sock->edge())) {
 					_drag_event->e->setSink(sock->index());
 					_drag_event->e->d_ptr->setStop(mapToScene(event->pos()));
 					_drag_event->mode = EdgeDragEvent::move_to_sink;
-				} else {
-					_drag_event->e->setSource(sock->index());
-					_drag_event->e->d_ptr->setStart(mapToScene(event->pos()));
-					_drag_event->mode = EdgeDragEvent::move_to_source;
 				}
-			}
-			else {
-				if (sock->socketType() == GraphicsNodeSocket::SocketType::SINK) {
+				else {
 					_drag_event->e = m_pModel->initiateConnectionFromSink(sock->index(),mapToScene(event->pos()));
 					_drag_event->e->setSink(sock->index());
 					_drag_event->mode = EdgeDragEvent::connect_to_source;
+				}
+			}
+			else {
+				if (_drag_event->e = m_pModel->getSinkEdge(sock->edge())) {
+					_drag_event->e->setSource(sock->index());
+					_drag_event->e->d_ptr->setStart(mapToScene(event->pos()));
+					_drag_event->mode = EdgeDragEvent::move_to_source;
 				}
 				else {
 					_drag_event->e = m_pModel->initiateConnectionFromSource(sock->index(),mapToScene(event->pos()));
 					_drag_event->e->setSource(sock->index());
 					_drag_event->mode = EdgeDragEvent::connect_to_sink;
 				}
-				scene()->addItem(_drag_event->e->graphicsItem());
 			}
+
 			event->ignore();
 		}
 		else {

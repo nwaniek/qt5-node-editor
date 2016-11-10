@@ -28,6 +28,17 @@ struct NodeWrapper
     QRectF m_SceneRect;
 };
 
+struct EdgeWrapper final
+{
+    explicit EdgeWrapper(QNodeEditorEdgeModel* m, const QModelIndex& index)
+        : m_Edge(m, index)
+    { Q_ASSERT(index.isValid()); }
+
+    GraphicsNodeSocket* m_pSource {nullptr};
+    GraphicsBezierEdge  m_Edge;
+    GraphicsNodeSocket* m_pSink {nullptr};
+};
+
 class QNodeEditorSocketModelPrivate final : public QObject
 {
 public:
@@ -35,7 +46,7 @@ public:
 
     QNodeEditorEdgeModel  m_EdgeModel {this};
     QVector<NodeWrapper*> m_lWrappers;
-    QVector<GraphicsDirectedEdge*> m_lEdges;
+    QVector<EdgeWrapper*> m_lEdges;
     GraphicsNodeScene*    m_pScene;
 
     // helper
@@ -180,6 +191,9 @@ GraphicsNodeSocket* QNodeEditorSocketModel::getSourceSocket(const QModelIndex& i
     if (!idx.parent().isValid())
         return Q_NULLPTR;
 
+    if (idx.model() == edgeModel())
+        return d_ptr->m_lEdges[idx.row()]->m_pSource;
+
     const auto nodew = d_ptr->getNode(idx, true);
 
     if (!nodew)
@@ -194,6 +208,9 @@ GraphicsNodeSocket* QNodeEditorSocketModel::getSinkSocket(const QModelIndex& idx
     if (!idx.parent().isValid())
         return Q_NULLPTR;
 
+    if (idx.model() == edgeModel())
+        return d_ptr->m_lEdges[idx.row()]->m_pSink;
+
     const auto nodew = d_ptr->getNode(idx, true);
 
     if (!nodew)
@@ -201,6 +218,20 @@ GraphicsNodeSocket* QNodeEditorSocketModel::getSinkSocket(const QModelIndex& idx
 
     return nodew->m_lSinksToSrc.size() > idx.row() ?
         nodew->m_lSinksToSrc[idx.row()] : Q_NULLPTR;
+}
+
+GraphicsDirectedEdge* QNodeEditorSocketModel::getSourceEdge(const QModelIndex& idx)
+{
+    return idx.model() == edgeModel() ? &d_ptr->m_lEdges[idx.row()]->m_Edge : nullptr;
+
+    //FIXME support SocketModel index
+}
+
+GraphicsDirectedEdge* QNodeEditorSocketModel::getSinkEdge(const QModelIndex& idx)
+{
+    return idx.model() == edgeModel() ? &d_ptr->m_lEdges[idx.row()]->m_Edge : nullptr;
+
+    //FIXME support SocketModel index
 }
 
 QNodeEditorEdgeModel* QNodeEditorSocketModel::edgeModel() const
@@ -217,18 +248,16 @@ GraphicsDirectedEdge* QNodeEditorSocketModelPrivate::initiateConnectionFromSourc
 
     const int last = q_ptr->edgeModel()->rowCount() - 1;
 
-    qDebug() << "CCCC" << last;
-
     if (m_lEdges.size() <= last || !m_lEdges[last]) {
-        qDebug() << "\n\nBBBB" << last << m_lEdges.size();
         m_lEdges.resize(std::max(m_lEdges.size(), last+1));
-        m_lEdges[last] = new GraphicsBezierEdge(
+        m_lEdges[last] = new EdgeWrapper(
             q_ptr->edgeModel(),
             q_ptr->edgeModel()->index(last, 1)
         );
+        m_pScene->addItem(m_lEdges[last]->m_Edge.graphicsItem());
     }
 
-    return m_lEdges[last];
+    return &m_lEdges[last]->m_Edge;
 }
 
 GraphicsDirectedEdge* QNodeEditorSocketModel::initiateConnectionFromSource(const QModelIndex& index, const QPointF& point)
@@ -424,7 +453,6 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
 
     QModelIndex srcIdx = mapToSource(idx);
 
-
     switch(idx.column()) {
         case QReactiveProxyModel::ConnectionsColumns::SOURCE:
             srcIdx = mapToSource(idx).data(QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX).toModelIndex();
@@ -447,6 +475,7 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
 
 void QNodeEditorSocketModelPrivate::slotConnectionsInserted(const QModelIndex& parent, int first, int last)
 {
+    //FIXME dead code
     typedef QReactiveProxyModel::ConnectionsColumns Column;
 
     auto srcSockI  = q_ptr->index(first, Column::SOURCE).data(
@@ -457,10 +486,8 @@ void QNodeEditorSocketModelPrivate::slotConnectionsInserted(const QModelIndex& p
     );
 
     // If this happens, then the model is buggy or there is a race condition.
-    if ((!srcSockI.isValid()) && (!destSockI.isValid())) {
-        Q_ASSERT(false);
+    if ((!srcSockI.isValid()) && (!destSockI.isValid()))
         return;
-    }
 
     //TODO support rows removed
 
@@ -485,10 +512,18 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
         // Make sure the edge exists
         if (m_lEdges.size()-1 <= i && !m_lEdges[i]) {
             m_lEdges.resize(std::max(m_lEdges.size(), i+1));
-            m_lEdges[i] = new GraphicsBezierEdge(&m_EdgeModel, m_EdgeModel.index(i, 1));
+            m_lEdges[i] = new EdgeWrapper(&m_EdgeModel, m_EdgeModel.index(i, 1));
+            m_pScene->addItem(m_lEdges[i]->m_Edge.graphicsItem());
         }
 
-        m_lEdges[i]->update();
+        // Update the node mapping
+        if (m_lEdges[i]->m_pSource = q_ptr->getSourceSocket(src))
+            m_lEdges[i]->m_pSource->setEdge(m_EdgeModel.index(i, 0));
+
+        if (m_lEdges[i]->m_pSink   = q_ptr->getSinkSocket(sink))
+            m_lEdges[i]->m_pSink->setEdge(m_EdgeModel.index(i, 2));
+
+        m_lEdges[i]->m_Edge.update();
     }
 }
 

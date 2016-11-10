@@ -48,6 +48,8 @@ GraphicsDirectedEdge::
 GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor)
 : QObject(), d_ptr(new GraphicsDirectedEdgePrivate(this))
 {
+    Q_ASSERT(index.isValid());
+
     d_ptr->m_pModel = m;
     d_ptr->m_Index  = index;
     d_ptr->_factor  = factor;
@@ -125,6 +127,7 @@ GraphicsBezierEdge::GraphicsBezierEdge(QNodeEditorEdgeModel* m, const QModelInde
 void GraphicsBezierItem::
 updatePath()
 {
+    Q_ASSERT(d_ptr->m_Index.isValid());
 
     auto srcI  = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 0)
         .data(Qt::SizeHintRole);

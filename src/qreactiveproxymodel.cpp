@@ -17,6 +17,7 @@ const T& qAsConst(const T& v)
 class ConnectedIndicesModel : public QAbstractTableModel
 {
     friend class QReactiveProxyModel;
+    friend class QReactiveProxyModelPrivate;
 public:
     ConnectedIndicesModel(QObject* parent, QReactiveProxyModelPrivate* d);
 
@@ -37,6 +38,14 @@ struct ConnectionHolder
     QPersistentModelIndex destination;
     void* sourceIP;
     void* destinationIP;
+
+    bool isValid() const {
+        return source.isValid() && destination.isValid();
+    }
+
+    bool isUsed() const {
+        return source.isValid() || destination.isValid();
+    }
 };
 
 class QReactiveProxyModelPrivate : public QObject
@@ -56,7 +65,8 @@ public:
 
     //Helper
     void clear();
-    void synchronize(const QModelIndex& source, const QModelIndex& destination) const;
+    bool synchronize(const QModelIndex& source, const QModelIndex& destination) const;
+    ConnectionHolder* newConnection();
 
     QReactiveProxyModel* q_ptr;
 public Q_SLOTS:
@@ -213,6 +223,22 @@ QAbstractItemModel* QReactiveProxyModel::connectionsModel() const
     return d_ptr->m_pConnectionModel;
 }
 
+ConnectionHolder* QReactiveProxyModelPrivate::newConnection()
+{
+    if (m_lConnections.isEmpty() || !m_lConnections.last()->isUsed()) {
+        const int id = m_lConnections.size();
+
+        auto conn = new ConnectionHolder { id, {}, {}, {}, {}, };
+
+        // Register the connection
+        //m_pConnectionModel->beginInsertRows({}, id, id); //FIXME conflict with rowCount
+        m_lConnections << conn;
+        //m_pConnectionModel->endInsertRows();
+    }
+
+    return m_lConnections.last();
+}
+
 bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModelIndex& destIdx)
 {
     if (!(srcIdx.isValid() && destIdx.isValid()))
@@ -223,15 +249,15 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
         return false;
     }
 
-    const int id = d_ptr->m_lConnections.size();
+    //TODO check if its already connected
+    //TODO check if there is a partial connection that can be re-used
 
-    auto conn = new ConnectionHolder {
-        id,
-        srcIdx,
-        destIdx,
-        srcIdx.internalPointer(),
-        destIdx.internalPointer(),
-    };
+    auto conn = d_ptr->newConnection();
+
+    conn->source        = srcIdx;
+    conn->destination   = destIdx;
+    conn->sourceIP      = srcIdx.internalPointer();
+    conn->destinationIP = destIdx.internalPointer();
 
     // Check if there is an internal pointer or UID, models can work without
     // them, better not assume they exist. It is also not possible to assume
@@ -244,11 +270,6 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
 
     // Sync the current source value into the sink
     d_ptr->synchronize(srcIdx, destIdx);
-
-    // Register the connection
-    d_ptr->m_pConnectionModel->beginInsertRows({}, id, id);
-    d_ptr->m_lConnections << conn;
-    d_ptr->m_pConnectionModel->endInsertRows();
 
     return true;
 }
@@ -282,13 +303,7 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
 
     // This model auto add rows
     if (index.row() == d_ptr->m_lConnections.size())
-        d_ptr->m_lConnections << new ConnectionHolder {
-        d_ptr->m_lConnections.size(),
-        {},
-        {},
-        nullptr,
-        nullptr,
-    };
+        d_ptr->newConnection();
 
     // First, given is a random QModelIndex, it might be in an anonymous proxy.
     // Usually, those are rejected, but here is would void some valid use cases.
@@ -318,6 +333,8 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
                     conn->sourceIP = i.internalPointer();
                     d_ptr->m_hDirectMapping[i.internalPointer()] = conn;
                 }
+                else
+                    conn->sourceIP = nullptr;
                 d_ptr->synchronize(conn->source, conn->destination);
             }
             else if (index.column() == QReactiveProxyModel::ConnectionsColumns::DESTINATION) {
@@ -328,10 +345,13 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
                     conn->destinationIP = i.internalPointer();
                     d_ptr->m_hDirectMapping[i.internalPointer()] = conn;
                 }
+                else
+                    conn->destinationIP = nullptr;
                 d_ptr->synchronize(conn->source, conn->destination);
 
                 //FIXME this may require a beginInsertRows
             }
+
             return true;
     }
 
@@ -370,12 +390,10 @@ QVariant ConnectedIndicesModel::data(const QModelIndex& idx, int role) const
 
 int ConnectedIndicesModel::rowCount(const QModelIndex& parent) const
 {
-    const bool hasLast = d_ptr->m_lConnections.size() && !(
-        d_ptr->m_lConnections.last()->destinationIP
-            || d_ptr->m_lConnections.last()->sourceIP
-    );
+    const bool needNew = (!d_ptr->m_lConnections.size()) ||
+        d_ptr->m_lConnections.last()->isValid();
 
-    return parent.isValid() ? 0 : d_ptr->m_lConnections.size() + (hasLast?0:1);
+    return parent.isValid() ? 0 : d_ptr->m_lConnections.size() + (needNew?1:0);
 }
 
 int ConnectedIndicesModel::columnCount(const QModelIndex& parent) const
@@ -390,10 +408,10 @@ void QReactiveProxyModelPrivate::clear()
     }
 }
 
-void QReactiveProxyModelPrivate::synchronize(const QModelIndex& s, const QModelIndex& d) const
+bool QReactiveProxyModelPrivate::synchronize(const QModelIndex& s, const QModelIndex& d) const
 {
     if ((!s.isValid()) || !d.isValid())
-        return;
+        return false;
 
     static const QVector<int> fallbackRole {Qt::DisplayRole};
 
@@ -401,6 +419,8 @@ void QReactiveProxyModelPrivate::synchronize(const QModelIndex& s, const QModelI
 
     for (int role : qAsConst(*roles))
         q_ptr->setData(d, s.data(role) , role);
+
+    return true;
 }
 
 void QReactiveProxyModelPrivate::slotMimeDestroyed()
@@ -427,15 +447,11 @@ void QReactiveProxyModelPrivate::slotDataChanged(const QModelIndex& tl, const QM
     // Only 1 item changed
     if (tl == br) {
         if (const auto conn = m_hDirectMapping[tl.internalPointer()]) {
-            Q_ASSERT(conn->source.isValid());
-            Q_ASSERT(conn->destination.isValid());
-
-            synchronize(conn->source, conn->destination);
-
-            Q_EMIT m_pConnectionModel->dataChanged(
-                m_pConnectionModel->index(conn->index, 0),
-                m_pConnectionModel->index(conn->index, 2)
-            );
+            if (synchronize(conn->source, conn->destination))
+                Q_EMIT m_pConnectionModel->dataChanged(
+                    m_pConnectionModel->index(conn->index, 0),
+                    m_pConnectionModel->index(conn->index, 2)
+                );
         }
     }
     else {
