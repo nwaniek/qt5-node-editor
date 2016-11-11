@@ -25,7 +25,6 @@ public:
 
     virtual ~GraphicsDirectedEdge();
 
-    void cancel();
     void update();
 
     QGraphicsItem *graphicsItem() const;

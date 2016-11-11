@@ -21,12 +21,8 @@ struct EdgeDragEvent
 	// encode what the user is actually doing.
 	enum drag_mode {
 		// connect a new edge to a source or sink
-		connect_to_source,
-		connect_to_sink,
-
-		// move an existing edge to another source/sink
-		move_to_source,
-		move_to_sink
+		to_source,
+		to_sink,
 	};
 
 	GraphicsDirectedEdge *e;

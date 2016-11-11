@@ -225,7 +225,7 @@ QAbstractItemModel* QReactiveProxyModel::connectionsModel() const
 
 ConnectionHolder* QReactiveProxyModelPrivate::newConnection()
 {
-    if (m_lConnections.isEmpty() || !m_lConnections.last()->isUsed()) {
+    if (m_lConnections.isEmpty() || m_lConnections.last()->isUsed()) {
         const int id = m_lConnections.size();
 
         auto conn = new ConnectionHolder { id, {}, {}, {}, {}, };
@@ -307,15 +307,11 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
 
     // First, given is a random QModelIndex, it might be in an anonymous proxy.
     // Usually, those are rejected, but here is would void some valid use cases.
-
     auto i = value.toModelIndex();
 
-    while (i.isValid()
-        && i.model() != d_ptr->q_ptr
-        && qobject_cast<const QAbstractProxyModel*>(i.model())
-    ) {
-        i = qobject_cast<const QAbstractProxyModel*>(i.model())->mapToSource(i);
-    }
+    #define M qobject_cast<const QAbstractProxyModel*>(i.model())
+    while (i.model() != d_ptr->q_ptr && M && (i = M->mapToSource(i)).isValid());
+    #undef M
 
     // `i` can be invalid (to disconnect)
     Q_ASSERT((!i.isValid()) || i.model() == d_ptr->q_ptr);
@@ -351,6 +347,8 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
 
                 //FIXME this may require a beginInsertRows
             }
+
+            Q_EMIT dataChanged(index, index);
 
             return true;
     }
@@ -427,7 +425,6 @@ void QReactiveProxyModelPrivate::slotMimeDestroyed()
 {
     // collect the garbage
     m_hDraggedIndexCache.remove(static_cast<QMimeData*>(QObject::sender()));
-
 }
 
 void QReactiveProxyModelPrivate::slotDataChanged(const QModelIndex& tl, const QModelIndex& br)

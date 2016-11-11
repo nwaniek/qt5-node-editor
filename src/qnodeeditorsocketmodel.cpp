@@ -41,6 +41,7 @@ struct EdgeWrapper final
     GraphicsNodeSocket* m_pSource {Q_NULLPTR};
     GraphicsBezierEdge  m_Edge               ;
     GraphicsNodeSocket* m_pSink   {Q_NULLPTR};
+    bool                m_IsShown {  false  };
 };
 
 class QNodeEditorSocketModelPrivate final : public QObject
@@ -546,25 +547,40 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
         const auto src  = m_EdgeModel.index(i, 0).data(CRole::SOURCE_INDEX     ).toModelIndex();
         const auto sink = m_EdgeModel.index(i, 2).data(CRole::DESTINATION_INDEX).toModelIndex();
 
-        // Empty connections don't need edges yet
-        if ((!src.isValid()) && (!sink.isValid()))
-            continue;
-
         // Make sure the edge exists
         if (m_lEdges.size()-1 <= i && !m_lEdges[i]) {
             m_lEdges.resize(std::max(m_lEdges.size(), i+1));
             m_lEdges[i] = new EdgeWrapper(&m_EdgeModel, m_EdgeModel.index(i, 1));
-            m_pScene->addItem(m_lEdges[i]->m_Edge.graphicsItem());
         }
 
+        auto e = m_lEdges[i];
+
+        auto oldSrc(e->m_pSource), oldSink(e->m_pSink);
+
         // Update the node mapping
-        if ((m_lEdges[i]->m_pSource = q_ptr->getSourceSocket(src)))
-            m_lEdges[i]->m_pSource->setEdge(m_EdgeModel.index(i, 0));
+        if ((e->m_pSource = q_ptr->getSourceSocket(src)))
+            e->m_pSource->setEdge(m_EdgeModel.index(i, 0));
 
-        if ((m_lEdges[i]->m_pSink   = q_ptr->getSinkSocket(sink)))
-            m_lEdges[i]->m_pSink->setEdge(m_EdgeModel.index(i, 2));
+        if (oldSrc && oldSrc != e->m_pSource)
+            oldSrc->setEdge({});
 
-        m_lEdges[i]->m_Edge.update();
+        if ((e->m_pSink = q_ptr->getSinkSocket(sink)))
+            e->m_pSink->setEdge(m_EdgeModel.index(i, 2));
+
+        if (oldSink && oldSink != e->m_pSink)
+            oldSink->setEdge({});
+
+        // Update the graphic item
+        const bool isUsed = e->m_pSource || e->m_pSink;
+
+        e->m_Edge.update();
+
+        if (e->m_IsShown != isUsed && isUsed)
+            m_pScene->addItem(e->m_Edge.graphicsItem());
+        else if (e->m_IsShown != isUsed && !isUsed)
+            m_pScene->removeItem(e->m_Edge.graphicsItem());
+
+        e->m_IsShown = isUsed;
     }
 }
 

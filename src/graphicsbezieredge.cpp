@@ -63,11 +63,6 @@ GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal fa
     d_ptr->m_pGrpahicsItem->setGraphicsEffect(d_ptr->_effect);
 }
 
-void GraphicsDirectedEdge::cancel()
-{
-    //TODO if the connection isn't fixed yet, then hide this
-}
-
 void GraphicsDirectedEdge::update()
 {
     d_ptr->m_pGrpahicsItem->updatePath();
