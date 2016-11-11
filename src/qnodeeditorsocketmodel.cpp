@@ -13,8 +13,12 @@
 
 #define REACTIVE_MODEL qobject_cast<QReactiveProxyModel*>(d_ptr->q_ptr->sourceModel())
 
-struct NodeWrapper
+struct NodeWrapper final
 {
+    ~NodeWrapper() {
+        delete m_pNode;
+    }
+
     GraphicsNode* m_pNode;
 
     // Keep aligned with the source row
@@ -34,9 +38,9 @@ struct EdgeWrapper final
         : m_Edge(m, index)
     { Q_ASSERT(index.isValid()); }
 
-    GraphicsNodeSocket* m_pSource {nullptr};
-    GraphicsBezierEdge  m_Edge;
-    GraphicsNodeSocket* m_pSink {nullptr};
+    GraphicsNodeSocket* m_pSource {Q_NULLPTR};
+    GraphicsBezierEdge  m_Edge               ;
+    GraphicsNodeSocket* m_pSink   {Q_NULLPTR};
 };
 
 class QNodeEditorSocketModelPrivate final : public QObject
@@ -51,23 +55,24 @@ public:
 
     // helper
     GraphicsNode* insertNode(int idx, const QString& title);
-    NodeWrapper* getNode(const QModelIndex& idx, bool r = false) const;
+    NodeWrapper*  getNode(const QModelIndex& idx, bool r = false) const;
 
     void insertSockets(const QModelIndex& parent, int first, int last);
     void updateSockets(const QModelIndex& parent, int first, int last);
     void removeSockets(const QModelIndex& parent, int first, int last);
 
     GraphicsDirectedEdge* initiateConnectionFromSource(
-        const QModelIndex& index,
+        const QModelIndex&             index,
         GraphicsNodeSocket::SocketType type,
-        const QPointF& point
+        const QPointF&                 point
     );
 
     QNodeEditorSocketModel* q_ptr;
+
 public Q_SLOTS:
-    void slotRowsInserted(const QModelIndex& parent, int first, int last);
+    void slotRowsInserted       (const QModelIndex& parent, int first, int last);
     void slotConnectionsInserted(const QModelIndex& parent, int first, int last);
-    void slotConnectionsChanged(const QModelIndex& tl, const QModelIndex& br);
+    void slotConnectionsChanged (const QModelIndex& tl, const QModelIndex& br  );
 };
 
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
@@ -97,7 +102,13 @@ QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, Gra
 
 QNodeEditorSocketModel::~QNodeEditorSocketModel()
 {
-    
+    while (!d_ptr->m_lEdges.isEmpty())
+        delete d_ptr->m_lEdges.takeLast();
+
+    while (!d_ptr->m_lWrappers.isEmpty())
+        delete d_ptr->m_lWrappers.takeLast();
+
+    delete d_ptr;
 }
 
 void QNodeEditorSocketModel::setSourceModel(QAbstractItemModel *sm)
@@ -148,14 +159,14 @@ GraphicsNodeScene* QNodeEditorEdgeModel::scene() const
 
 int QNodeEditorSocketModel::sourceSocketCount(const QModelIndex& idx) const
 {
-    auto nodew = d_ptr->getNode(idx);
+    const auto nodew = d_ptr->getNode(idx);
 
     return nodew ? nodew->m_lSources.size() : 0;
 }
 
 int QNodeEditorSocketModel::sinkSocketCount(const QModelIndex& idx) const
 {
-    auto nodew = d_ptr->getNode(idx);
+    const auto nodew = d_ptr->getNode(idx);
 
     return nodew ? nodew->m_lSinks.size() : 0;
 }
@@ -165,7 +176,7 @@ GraphicsNode* QNodeEditorSocketModel::getNode(const QModelIndex& idx, bool recur
     if ((!idx.isValid()) || idx.model() != this)
         return Q_NULLPTR;
 
-    auto i = (recursive && idx.parent().isValid()) ? idx.parent() : idx;
+    const auto i = (recursive && idx.parent().isValid()) ? idx.parent() : idx;
 
     auto nodew = d_ptr->getNode(i);
 
@@ -174,14 +185,14 @@ GraphicsNode* QNodeEditorSocketModel::getNode(const QModelIndex& idx, bool recur
 
 QVector<GraphicsNodeSocket*> QNodeEditorSocketModel::getSourceSockets(const QModelIndex& idx) const
 {
-    auto nodew = d_ptr->getNode(idx);
+    const auto nodew = d_ptr->getNode(idx);
 
     return nodew ? nodew->m_lSources : QVector<GraphicsNodeSocket*>();
 }
 
 QVector<GraphicsNodeSocket*> QNodeEditorSocketModel::getSinkSockets(const QModelIndex& idx) const
 {
-    auto nodew = d_ptr->getNode(idx);
+    const auto nodew = d_ptr->getNode(idx);
 
     return nodew ? nodew->m_lSinks : QVector<GraphicsNodeSocket*>();
 }
@@ -222,14 +233,16 @@ GraphicsNodeSocket* QNodeEditorSocketModel::getSinkSocket(const QModelIndex& idx
 
 GraphicsDirectedEdge* QNodeEditorSocketModel::getSourceEdge(const QModelIndex& idx)
 {
-    return idx.model() == edgeModel() ? &d_ptr->m_lEdges[idx.row()]->m_Edge : nullptr;
+    return idx.model() == edgeModel() ?
+        &d_ptr->m_lEdges[idx.row()]->m_Edge : Q_NULLPTR;
 
     //FIXME support SocketModel index
 }
 
 GraphicsDirectedEdge* QNodeEditorSocketModel::getSinkEdge(const QModelIndex& idx)
 {
-    return idx.model() == edgeModel() ? &d_ptr->m_lEdges[idx.row()]->m_Edge : nullptr;
+    return idx.model() == edgeModel() ?
+        &d_ptr->m_lEdges[idx.row()]->m_Edge : Q_NULLPTR;
 
     //FIXME support SocketModel index
 }
@@ -241,9 +254,12 @@ QNodeEditorEdgeModel* QNodeEditorSocketModel::edgeModel() const
 
 GraphicsDirectedEdge* QNodeEditorSocketModelPrivate::initiateConnectionFromSource( const QModelIndex& idx, GraphicsNodeSocket::SocketType type, const QPointF& point )
 {
+    Q_UNUSED(type ); //TODO use it or delete it
+    Q_UNUSED(point); //TODO use it or delete it
+
     if (!idx.parent().isValid()) {
         qWarning() << "Cannot initiate an edge from an invalid node index";
-        return nullptr;
+        return Q_NULLPTR;
     }
 
     const int last = q_ptr->edgeModel()->rowCount() - 1;
@@ -262,12 +278,16 @@ GraphicsDirectedEdge* QNodeEditorSocketModelPrivate::initiateConnectionFromSourc
 
 GraphicsDirectedEdge* QNodeEditorSocketModel::initiateConnectionFromSource(const QModelIndex& index, const QPointF& point)
 {
-    return d_ptr->initiateConnectionFromSource(index, GraphicsNodeSocket::SocketType::SOURCE, point);
+    return d_ptr->initiateConnectionFromSource(
+        index, GraphicsNodeSocket::SocketType::SOURCE, point
+    );
 }
 
 GraphicsDirectedEdge* QNodeEditorSocketModel::initiateConnectionFromSink(const QModelIndex& index, const QPointF& point)
 {
-    return d_ptr->initiateConnectionFromSource(index, GraphicsNodeSocket::SocketType::SINK, point);
+    return d_ptr->initiateConnectionFromSource(
+        index, GraphicsNodeSocket::SocketType::SINK, point
+    );
 }
 
 void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, int first, int last)
@@ -290,7 +310,7 @@ void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, 
 
 GraphicsNode* QNodeEditorSocketModelPrivate::insertNode(int idx, const QString& title)
 {
-    auto idx2 = q_ptr->index(idx, 0);
+    const auto idx2 = q_ptr->index(idx, 0);
 
     Q_ASSERT(idx2.isValid());
 
@@ -301,7 +321,7 @@ GraphicsNode* QNodeEditorSocketModelPrivate::insertNode(int idx, const QString& 
     n->setTitle(title);
 
     auto nw = new NodeWrapper{
-        n, {}, {}, {}, {}
+        n, {}, {}, {}, {}, {}
     };
 
     m_lWrappers.insert(idx, nw);
@@ -336,21 +356,30 @@ NodeWrapper* QNodeEditorSocketModelPrivate::getNode(const QModelIndex& idx, bool
 
 void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int first, int last)
 {
-    qDebug() << "IN QNodeEditorSocketModelPrivate::insertSockets" << first << last;
+    Q_UNUSED(first)
+    Q_UNUSED(last)
 
     auto nodew = getNode(parent);
     Q_ASSERT(nodew);
 
-    Q_ASSERT(parent.isValid() && (!parent.parent().isValid()) && parent.model() == q_ptr);
+    Q_ASSERT(parent.isValid() && (!parent.parent().isValid()));
 
-    for (int i = 0; i < q_ptr->rowCount(parent); i++) {
+    Q_ASSERT(parent.model() == q_ptr);
+
+    for (int i = 0; i < q_ptr->rowCount(parent); i++) { //FIXME use first and last
         const auto idx = q_ptr->index(i, 0, parent);
 
         // It doesn't attempt to insert the socket at the correct index as
         // many items will be rejected
 
+        constexpr static const Qt::ItemFlags sourceFlags(
+            Qt::ItemIsDragEnabled |
+            Qt::ItemIsEnabled     |
+            Qt::ItemIsSelectable
+        );
+
         // SOURCES
-        if (idx.flags() & Qt::ItemIsDragEnabled) {
+        if ((idx.flags() & sourceFlags) == sourceFlags) {
             auto s = new GraphicsNodeSocket(
                 idx,
                 GraphicsNodeSocket::SocketType::SOURCE,
@@ -364,11 +393,17 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
             );
             nodew->m_lSourcesToSrc.insert(i, s);
             nodew->m_lSources << s;
-
         }
 
+        constexpr static const Qt::ItemFlags sinkFlags(
+            Qt::ItemIsDropEnabled |
+            Qt::ItemIsEnabled     |
+            Qt::ItemIsSelectable  |
+            Qt::ItemIsEditable
+        );
+
         // SINKS
-        if (idx.flags() & (Qt::ItemIsDropEnabled | Qt::ItemIsEditable)) {
+        if ((idx.flags() & sinkFlags) == sinkFlags) {
             auto s = new GraphicsNodeSocket(
                 idx,
                 GraphicsNodeSocket::SocketType::SINK,
@@ -411,12 +446,13 @@ QNodeEditorEdgeModel::QNodeEditorEdgeModel(QNodeEditorSocketModelPrivate* parent
 }
 
 QNodeEditorEdgeModel::~QNodeEditorEdgeModel()
-{
-    
-}
+{ /* Nothing is owned by the edge model*/ }
 
 bool QNodeEditorEdgeModel::canConnect(const QModelIndex& idx1, const QModelIndex& idx2) const
 {
+    Q_UNUSED(idx1)
+    Q_UNUSED(idx2)
+
     return true; //TODO
 }
 
@@ -431,6 +467,8 @@ bool QNodeEditorEdgeModel::connectSocket(const QModelIndex& idx1, const QModelIn
         d_ptr->q_ptr->mapToSource(idx1),
         d_ptr->q_ptr->mapToSource(idx2)
     );
+
+    return true;
 }
 
 // bool QNodeEditorEdgeModel::setData(const QModelIndex &index, const QVariant &value, int role)
@@ -455,10 +493,14 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
 
     switch(idx.column()) {
         case QReactiveProxyModel::ConnectionsColumns::SOURCE:
-            srcIdx = mapToSource(idx).data(QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX).toModelIndex();
+            srcIdx = mapToSource(idx).data(
+                QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX
+            ).toModelIndex();
             break;
         case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
-            srcIdx = mapToSource(idx).data(QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX).toModelIndex();
+            srcIdx = mapToSource(idx).data(
+                QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX
+            ).toModelIndex();
             break;
     }
 
@@ -500,10 +542,9 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
 {
     typedef QReactiveProxyModel::ConnectionsRoles CRole;
 
-
     for (int i = tl.row(); i <= br.row(); i++) {
-        auto src  = m_EdgeModel.index(i, 0).data(CRole::SOURCE_INDEX     ).toModelIndex();
-        auto sink = m_EdgeModel.index(i, 2).data(CRole::DESTINATION_INDEX).toModelIndex();
+        const auto src  = m_EdgeModel.index(i, 0).data(CRole::SOURCE_INDEX     ).toModelIndex();
+        const auto sink = m_EdgeModel.index(i, 2).data(CRole::DESTINATION_INDEX).toModelIndex();
 
         // Empty connections don't need edges yet
         if ((!src.isValid()) && (!sink.isValid()))
@@ -517,10 +558,10 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
         }
 
         // Update the node mapping
-        if (m_lEdges[i]->m_pSource = q_ptr->getSourceSocket(src))
+        if ((m_lEdges[i]->m_pSource = q_ptr->getSourceSocket(src)))
             m_lEdges[i]->m_pSource->setEdge(m_EdgeModel.index(i, 0));
 
-        if (m_lEdges[i]->m_pSink   = q_ptr->getSinkSocket(sink))
+        if ((m_lEdges[i]->m_pSink   = q_ptr->getSinkSocket(sink)))
             m_lEdges[i]->m_pSink->setEdge(m_EdgeModel.index(i, 2));
 
         m_lEdges[i]->m_Edge.update();
