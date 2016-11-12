@@ -244,6 +244,11 @@ bool GraphicsNodeSocket::isConnected() const
     ).toModelIndex().isValid();
 }
 
+bool GraphicsNodeSocket::isEnabled() const
+{
+    return d_ptr->m_PersistentIndex.flags() & Qt::ItemIsEnabled;
+}
+
 QString GraphicsNodeSocket::
 text() const
 {

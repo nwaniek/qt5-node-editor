@@ -60,6 +60,8 @@ public:
 
     bool isConnected() const;
 
+    bool isEnabled() const;
+
     QModelIndex index() const;
 
     GraphicsNode *source() const;
