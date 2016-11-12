@@ -1,5 +1,6 @@
 #pragma once
 
+#include "qtypecoloriserproxy.h"
 #include <QtCore/QIdentityProxyModel>
 
 #include <graphicsnodesocket.hpp>
@@ -44,7 +45,7 @@ private:
  *
  * TODO once the model refactoring is done, turn into a private class
  */
-class QNodeEditorSocketModel : public QIdentityProxyModel
+class QNodeEditorSocketModel : public QTypeColoriserProxy
 {
     Q_OBJECT
 public:

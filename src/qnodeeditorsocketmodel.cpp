@@ -95,9 +95,13 @@ public Q_SLOTS:
 };
 
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
-    QIdentityProxyModel(rmodel), d_ptr(new QNodeEditorSocketModelPrivate(this))
+    QTypeColoriserProxy(rmodel), d_ptr(new QNodeEditorSocketModelPrivate(this))
 {
     Q_ASSERT(rmodel);
+
+    setBackgroundRole<QString>(QBrush("#ff0000"));
+    setBackgroundRole<int>(QBrush("#ff00ff"));
+    setBackgroundRole<QAbstractItemModel*>(QBrush("#ffff00"));
 
     rmodel->addConnectedRole(QObjectModel::Role::ValueRole);
 
@@ -135,7 +139,7 @@ void QNodeEditorSocketModel::setSourceModel(QAbstractItemModel *sm)
     // This models can only work with a QReactiveProxyModel (no proxies)
     Q_ASSERT(qobject_cast<QReactiveProxyModel*>(sm));
 
-    QIdentityProxyModel::setSourceModel(sm);
+    QTypeColoriserProxy::setSourceModel(sm);
 
     //TODO clear (this can wait, it wont happen anyway)
 
@@ -163,12 +167,12 @@ bool QNodeEditorSocketModel::setData(const QModelIndex &idx, const QVariant &val
         return true;
     }
 
-    return QIdentityProxyModel::setData(idx, value, role);
+    return QTypeColoriserProxy::setData(idx, value, role);
 }
 
 QMimeData *QNodeEditorSocketModel::mimeData(const QModelIndexList &idxs) const
 {
-    auto md = QIdentityProxyModel::mimeData(idxs);
+    auto md = QTypeColoriserProxy::mimeData(idxs);
 
     // Assume the QMimeData exist only while the data is being dragged
     if (md) {
@@ -193,7 +197,7 @@ QMimeData *QNodeEditorSocketModel::mimeData(const QModelIndexList &idxs) const
 
 Qt::ItemFlags QNodeEditorSocketModel::flags(const QModelIndex &idx) const
 {
-    Qt::ItemFlags f = QIdentityProxyModel::flags(idx);
+    Qt::ItemFlags f = QTypeColoriserProxy::flags(idx);
 
     // Disable everything but compatible sockets
     return f ^ ((
