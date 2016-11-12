@@ -30,6 +30,11 @@ public:
     virtual QModelIndex parent(const QModelIndex& idx) const override;
     virtual QModelIndex mapFromSource(const QModelIndex& sourceIndex) const;
     virtual QModelIndex mapToSource(const QModelIndex& proxyIndex) const;
+    virtual bool canDropMimeData(const QMimeData *data, Qt::DropAction action,
+                int row, int column, const QModelIndex &parent) const override;
+    virtual bool dropMimeData(const QMimeData *data, Qt::DropAction action,
+                int row, int column, const QModelIndex &parent) override;
+    virtual QMimeData *mimeData(const QModelIndexList &indexes) const override;
 
     QModelIndex appendModel(QAbstractItemModel* model);
 

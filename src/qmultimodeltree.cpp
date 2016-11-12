@@ -1,6 +1,18 @@
 #include "qmultimodeltree.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QDataStream>
+#include <QtCore/QMimeData>
+#include <QtCore/QMimeType>
+
+#if QT_VERSION < 0x050700
+//Q_FOREACH is deprecated and Qt CoW containers are detached on C++11 for loops
+template<typename T>
+const T& qAsConst(const T& v)
+{
+    return const_cast<const T&>(v);
+}
+#endif
 
 struct InternalItem
 {
@@ -218,5 +230,63 @@ QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model)
         d_ptr, &QMultiModelTreePrivate::slotRowsInserted);
 
     return index(rowCount()-1, 0);
+}
+
+bool QMultiModelTree::canDropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) const
+{
+    auto idx = index(row, column, parent);
+
+    if (!idx.isValid())
+        return false;
+
+    const auto i = static_cast<InternalItem*>(idx.internalPointer());
+
+    auto srcIdx = mapToSource(idx);
+
+    return i->m_pModel->canDropMimeData(data, action, srcIdx.row(), srcIdx.column(), srcIdx.parent());
+}
+
+bool QMultiModelTree::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent)
+{
+    auto idx = index(row, column, parent);
+
+    if (!idx.isValid())
+        return false;
+
+    const auto i = static_cast<InternalItem*>(idx.internalPointer());
+
+    auto srcIdx = mapToSource(idx);
+
+    return i->m_pModel->dropMimeData(data, action, srcIdx.row(), srcIdx.column(), srcIdx.parent());
+}
+
+QMimeData* QMultiModelTree::mimeData(const QModelIndexList &indexes) const
+{
+    QModelIndexList newList;
+
+    bool singleModel = true;
+    QAbstractItemModel* srcModel = Q_NULLPTR;
+
+    for (auto i : qAsConst(indexes)) {
+        const auto srcIdx = mapToSource(i);
+        Q_ASSERT(srcIdx.model() != this);
+
+        if (!srcModel)
+            srcModel = const_cast<QAbstractItemModel*>(srcIdx.model());
+        else if (srcIdx.model() && srcIdx.model() != srcModel) {
+            singleModel = false;
+            break;
+        }
+
+        if (i.isValid()) {
+            Q_ASSERT(i.model() == this);
+            newList << srcIdx;
+        }
+    }
+
+    if ((!newList.isEmpty()) && srcModel)
+        return srcModel->mimeData(newList);
+
+    return QAbstractItemModel::mimeData(indexes);
 }
 
