@@ -58,6 +58,8 @@ public:
 
     virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
     virtual void setSourceModel(QAbstractItemModel *sourceModel) override;
+    virtual QMimeData *mimeData(const QModelIndexList &indexes) const override;
+    virtual Qt::ItemFlags flags(const QModelIndex &idx) const override;
 
     int sourceSocketCount(const QModelIndex& idx) const;
     int sinkSocketCount(const QModelIndex& idx) const;

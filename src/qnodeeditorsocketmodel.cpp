@@ -7,11 +7,21 @@
 
 #include "qreactiveproxymodel.h"
 
+#include "qmodeldatalistdecoder.h"
+
 #include <QtCore/QDebug>
+#include <QtCore/QMimeData>
 
 #include "qobjectmodel.h" //TODO remove
 
-#define REACTIVE_MODEL qobject_cast<QReactiveProxyModel*>(d_ptr->q_ptr->sourceModel())
+#if QT_VERSION < 0x050700
+//Q_FOREACH is deprecated and Qt CoW containers are detached on C++11 for loops
+template<typename T>
+const T& qAsConst(const T& v)
+{
+    return const_cast<const T&>(v);
+}
+#endif
 
 struct NodeWrapper final
 {
@@ -47,12 +57,19 @@ struct EdgeWrapper final
 class QNodeEditorSocketModelPrivate final : public QObject
 {
 public:
+    enum class State {
+        NORMAL,
+        DRAGGING,
+    };
+
     explicit QNodeEditorSocketModelPrivate(QObject* p) : QObject(p) {}
 
     QNodeEditorEdgeModel  m_EdgeModel {this};
     QVector<NodeWrapper*> m_lWrappers;
     QVector<EdgeWrapper*> m_lEdges;
     GraphicsNodeScene*    m_pScene;
+    State                 m_State {State::NORMAL};
+    quint32               m_CurrentTypeId {QMetaType::UnknownType};
 
     // helper
     GraphicsNode* insertNode(int idx, const QString& title);
@@ -74,6 +91,7 @@ public Q_SLOTS:
     void slotRowsInserted       (const QModelIndex& parent, int first, int last);
     void slotConnectionsInserted(const QModelIndex& parent, int first, int last);
     void slotConnectionsChanged (const QModelIndex& tl, const QModelIndex& br  );
+    void exitDraggingMode();
 };
 
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
@@ -146,6 +164,52 @@ bool QNodeEditorSocketModel::setData(const QModelIndex &idx, const QVariant &val
     }
 
     return QIdentityProxyModel::setData(idx, value, role);
+}
+
+QMimeData *QNodeEditorSocketModel::mimeData(const QModelIndexList &idxs) const
+{
+    auto md = QIdentityProxyModel::mimeData(idxs);
+
+    // Assume the QMimeData exist only while the data is being dragged
+    if (md) {
+        const QModelDataListDecoder decoder(md);
+
+        auto typeId = decoder.typeId(Qt::EditRole);
+
+        if (typeId != QMetaType::UnknownType) {
+            d_ptr->m_State = QNodeEditorSocketModelPrivate::State::DRAGGING;
+            d_ptr->m_CurrentTypeId = typeId;
+
+            connect(md, &QObject::destroyed, d_ptr,
+                &QNodeEditorSocketModelPrivate::exitDraggingMode);
+
+            for (auto n : qAsConst(d_ptr->m_lWrappers))
+                n->m_pNode->update();
+        }
+    }
+
+    return md;
+}
+
+Qt::ItemFlags QNodeEditorSocketModel::flags(const QModelIndex &idx) const
+{
+    Qt::ItemFlags f = QIdentityProxyModel::flags(idx);
+
+    // Disable everything but compatible sockets
+    return f ^ ((
+        d_ptr->m_State == QNodeEditorSocketModelPrivate::State::DRAGGING &&
+        (!idx.data(Qt::EditRole).canConvert(d_ptr->m_CurrentTypeId)) &&
+        f | Qt::ItemIsEnabled
+    ) ? Qt::ItemIsEnabled : Qt::NoItemFlags);;
+}
+
+void QNodeEditorSocketModelPrivate::exitDraggingMode()
+{
+    m_CurrentTypeId = QMetaType::UnknownType;
+    m_State = QNodeEditorSocketModelPrivate::State::NORMAL;
+
+    for (auto n : qAsConst(m_lWrappers))
+        n->m_pNode->update();
 }
 
 GraphicsNodeScene* QNodeEditorSocketModel::scene() const
@@ -375,7 +439,6 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
 
         constexpr static const Qt::ItemFlags sourceFlags(
             Qt::ItemIsDragEnabled |
-            Qt::ItemIsEnabled     |
             Qt::ItemIsSelectable
         );
 
@@ -398,7 +461,6 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
 
         constexpr static const Qt::ItemFlags sinkFlags(
             Qt::ItemIsDropEnabled |
-            Qt::ItemIsEnabled     |
             Qt::ItemIsSelectable  |
             Qt::ItemIsEditable
         );
@@ -462,7 +524,7 @@ bool QNodeEditorEdgeModel::connectSocket(const QModelIndex& idx1, const QModelIn
     if (idx1.model() != d_ptr->q_ptr || idx2.model() != d_ptr->q_ptr)
         return false;
 
-    auto m = REACTIVE_MODEL;
+    auto m = qobject_cast<QReactiveProxyModel*>(d_ptr->q_ptr->sourceModel());
 
     m->connectIndices(
         d_ptr->q_ptr->mapToSource(idx1),
