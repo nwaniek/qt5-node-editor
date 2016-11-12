@@ -157,7 +157,10 @@ drawAlignedText(QPainter *painter)
     }
 
     const QRectF rect(corner, QSizeF(s, s));
-    painter->setPen(_pen_text);
+
+    const auto fg = m_PersistentIndex.data(Qt::ForegroundRole);
+
+    painter->setPen(fg.canConvert<QPen>() ? qvariant_cast<QPen>(fg) : _pen_text);
     painter->drawText(rect, flags, _text, 0);
 }
 
@@ -173,7 +176,11 @@ void SocketGraphicsItem::
 paint(QPainter *painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/)
 {
     painter->setPen(d_ptr->_pen_circle);
-    painter->setBrush(d_ptr->_brush_circle);
+
+    const auto bg = d_ptr->m_PersistentIndex.data(Qt::BackgroundRole);
+
+    painter->setBrush(bg.canConvert<QBrush>() ? qvariant_cast<QBrush>(bg) : d_ptr->_brush_circle);
+
     painter->drawEllipse(-d_ptr->_circle_radius, -d_ptr->_circle_radius, d_ptr->_circle_radius*2, d_ptr->_circle_radius*2);
     d_ptr->drawAlignedText(painter);
 
