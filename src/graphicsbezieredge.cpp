@@ -165,7 +165,18 @@ paint(QPainter * painter, const QStyleOptionGraphicsItem * opt, QWidget *w)
 {
     Q_UNUSED(opt)
     Q_UNUSED(w)
-    painter->setPen(d_ptr->_pen);
+
+    const auto fg = d_ptr->m_Index.data(Qt::ForegroundRole);
+
+    // Set the line color
+    if (fg.canConvert<QBrush>())
+        painter->setPen(QPen(qvariant_cast<QBrush>(fg),d_ptr->_pen.width()));
+    else if (fg.canConvert<QPen>())
+        painter->setPen(qvariant_cast<QPen>(fg));
+    else
+        painter->setPen(d_ptr->_pen);
+
+
     painter->drawPath(path());
 }
 
