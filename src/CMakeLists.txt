@@ -23,6 +23,7 @@ set(SRC
     qnodewidget.cpp
     qnodeeditorsocketmodel.cpp
     qmodeldatalistdecoder.cpp
+    qtypecoloriserproxy.cpp
 )
 set(HEADERS
     graphicsbezieredge.hpp
