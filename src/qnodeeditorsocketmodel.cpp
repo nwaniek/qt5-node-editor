@@ -569,15 +569,30 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
                 QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX
             ).toModelIndex();
             break;
-    }
+        case QReactiveProxyModel::ConnectionsColumns::CONNECTION:
+            // Use the socket background as line color
+            if (role != Qt::ForegroundRole)
+                break;
 
+            srcIdx = mapToSource(index(idx.row(),2)).data(
+                QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX
+            ).toModelIndex();
+
+            if (!srcIdx.isValid())
+                srcIdx = mapToSource(index(idx.row(),0)).data(
+                QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX
+            ).toModelIndex();
+
+            return d_ptr->q_ptr->mapFromSource(srcIdx).data(Qt::BackgroundRole);
+
+            break;
+    }
 
     auto sock = (!idx.column()) ?
         d_ptr->q_ptr->getSourceSocket(srcIdx) : d_ptr->q_ptr->getSinkSocket(srcIdx);
 
-    if (sock && role == Qt::SizeHintRole) {
+    if (sock && role == Qt::SizeHintRole)
         return sock->graphicsItem()->mapToScene(0,0);
-    }
 
     return QIdentityProxyModel::data(idx, role);
 }
