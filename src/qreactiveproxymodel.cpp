@@ -5,6 +5,8 @@
 #include <QtCore/QMimeData>
 #include <QtCore/QDebug>
 
+#include "qmodeldatalistdecoder.h"
+
 #if QT_VERSION < 0x050700
 //Q_FOREACH is deprecated and Qt CoW containers are detached on C++11 for loops
 template<typename T>
@@ -105,7 +107,11 @@ QMimeData* QReactiveProxyModel::mimeData(const QModelIndexList &indexes) const
     if (!idx.isValid())
         return Q_NULLPTR;
 
-    auto md = new QMimeData();
+    // Will also have whatever the source had and hopefully the
+    // `application/x-qabstractitemmodeldatalist` MIME type from
+    // QAbstractItemModel::mimeData()`
+    auto md = QIdentityProxyModel::mimeData(indexes);
+
     connect(md, &QObject::destroyed, d_ptr, &QReactiveProxyModelPrivate::slotMimeDestroyed);
 
     d_ptr->m_hDraggedIndexCache[md] = idx;
@@ -120,13 +126,15 @@ bool QReactiveProxyModel::canDropMimeData(const QMimeData *data, Qt::DropAction 
     const auto idx = index(row, column, parent);
 
     if ((!data) || (!idx.isValid()) || !(action & supportedDropActions()))
-        return false;
+        return QIdentityProxyModel::canDropMimeData(data, action, row, column, parent);
 
     if (!data->hasFormat(d_ptr->MIME_TYPE))
-        return false;
+        return QIdentityProxyModel::canDropMimeData(data, action, row, column, parent);
 
+    // Try to decode `application/x-qabstractitemmodeldatalist`
+    QModelDataListDecoder decoder(data);
 
-    return true;
+    return decoder.canConvert(idx.data(Qt::EditRole).userType());
 }
 
 bool QReactiveProxyModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent)
@@ -134,13 +142,13 @@ bool QReactiveProxyModel::dropMimeData(const QMimeData *data, Qt::DropAction act
     Q_UNUSED(action)
 
     if ((!data) || !data->hasFormat(d_ptr->MIME_TYPE))
-        return false;
+        return QIdentityProxyModel::dropMimeData(data, action, row, column, parent);
 
     const auto srcIdx  = d_ptr->m_hDraggedIndexCache[data];
     const auto destIdx = index(row, column, parent);
 
     if ((!srcIdx.isValid()) || !destIdx.isValid())
-        return false;
+        return QIdentityProxyModel::dropMimeData(data, action, row, column, parent);
 
     connectIndices(srcIdx, destIdx);
 
@@ -156,12 +164,12 @@ QStringList QReactiveProxyModel::mimeTypes() const
 
 Qt::DropActions QReactiveProxyModel::supportedDropActions() const
 {
-    return Qt::LinkAction;
+    return QIdentityProxyModel::supportedDropActions() | Qt::LinkAction;
 }
 
 Qt::DropActions QReactiveProxyModel::supportedDragActions() const
 {
-    return Qt::LinkAction;
+    return QIdentityProxyModel::supportedDropActions() | Qt::LinkAction;
 }
 
 void QReactiveProxyModel::setSourceModel(QAbstractItemModel *sm)
@@ -415,8 +423,14 @@ bool QReactiveProxyModelPrivate::synchronize(const QModelIndex& s, const QModelI
 
     const auto roles = m_lConnectedRoles.size() ? &m_lConnectedRoles : &(fallbackRole);
 
-    for (int role : qAsConst(*roles))
+    for (int role : qAsConst(*roles)) {
+        const auto md = q_ptr->mimeData({s});
+
+        q_ptr->canDropMimeData(
+            md, Qt::LinkAction, d.row(), d.column(), d.parent()
+        );
         q_ptr->setData(d, s.data(role) , role);
+    }
 
     return true;
 }
