@@ -6,7 +6,7 @@
 #include <QGraphicsView>
 #include <QPoint>
 
-
+class QMimeData;
 class QResizeEvent;
 class GraphicsNode;
 class GraphicsDirectedEdge;
@@ -26,6 +26,7 @@ struct EdgeDragEvent
 	};
 
 	GraphicsDirectedEdge *e;
+	QMimeData* mimeData;
 	drag_mode mode;
 };
 

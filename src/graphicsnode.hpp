@@ -23,6 +23,7 @@ class GraphicsNodePrivate;
 
 class GraphicsNode : public QObject
 {
+    friend class QNodeEditorSocketModel; // To update them
     friend class QNodeEditorSocketModelPrivate; // For creating GraphicsNodes
     friend class NodeWrapper; // To delete it
     Q_OBJECT

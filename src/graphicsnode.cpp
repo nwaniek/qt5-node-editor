@@ -314,6 +314,10 @@ updateGeometry()
         s->graphicsItem()->setPos(0, ypos1 + size.height()/2.0);
         s->d_ptr->update();
         ypos1 += size.height() + _item_padding;
+
+        s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
+            1.0 : 0.1
+        );
     }
 
     // sources are placed bottom/right
@@ -326,6 +330,10 @@ updateGeometry()
         s->graphicsItem()->setPos(m_Size.width(), ypos2 + size.height()/2.0);
         s->d_ptr->update();
         ypos2 -= _item_padding;
+
+        s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
+            1.0 : 0.1
+        );
     }
 
     // central widget

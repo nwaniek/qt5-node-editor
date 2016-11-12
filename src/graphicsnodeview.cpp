@@ -4,6 +4,7 @@
 #include <QWheelEvent>
 #include <QScrollBar>
 #include <QResizeEvent>
+#include <QMimeData>
 #include <QGraphicsDropShadowEffect>
 #include <QResizeEvent>
 #include <QGraphicsItem>
@@ -124,6 +125,7 @@ leftMouseButtonRelease(QMouseEvent *event)
 			}
 
 		}
+		_drag_event->mimeData->deleteLater();
 		delete _drag_event;
 		_drag_event = nullptr;
 	} else
@@ -230,6 +232,7 @@ leftMouseButtonPress(QMouseEvent *event)
 
 			// initialize a new drag mode event
 			_drag_event = new EdgeDragEvent();
+			_drag_event->mimeData = m_pModel->mimeData({sock->index()});
 
 			switch (sock->socketType()) {
 			case GraphicsNodeSocket::SocketType::SINK:
