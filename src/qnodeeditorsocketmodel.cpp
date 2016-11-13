@@ -99,7 +99,7 @@ QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, Gra
 {
     Q_ASSERT(rmodel);
 
-    setBackgroundRole<QString>(QBrush("#ff0000"));
+    setBackgroundRole<bool>(QBrush("#ff0000"));
     setBackgroundRole<int>(QBrush("#ff00ff"));
     setBackgroundRole<QAbstractItemModel*>(QBrush("#ffff00"));
 
@@ -435,7 +435,7 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
 
     Q_ASSERT(parent.model() == q_ptr);
 
-    for (int i = 0; i < q_ptr->rowCount(parent); i++) { //FIXME use first and last
+    for (int i = first; i <= last; i++) {
         const auto idx = q_ptr->index(i, 0, parent);
 
         // It doesn't attempt to insert the socket at the correct index as
