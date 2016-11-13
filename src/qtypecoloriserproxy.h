@@ -17,7 +17,7 @@ public:
     virtual QVariant data(const QModelIndex& idx, int role) const override;
 
     int baseRole() const;
-    int setBaseRole(int role);
+    void setBaseRole(int role);
 
     void setForegroundRole(quint32 typeId, const QVariant& value);
     void setBackgroundRole(quint32 typeId, const QVariant& value);
@@ -34,5 +34,5 @@ public:
 
 private:
     QTypeColoriserProxyPrivate* d_ptr;
-    Q_DECLARE_PRIVATE(QTypeColoriserProxy);
+    Q_DECLARE_PRIVATE(QTypeColoriserProxy)
 };

@@ -41,7 +41,7 @@ int QTypeColoriserProxy::baseRole() const
     return d_ptr->m_Role;
 }
 
-int QTypeColoriserProxy::setBaseRole(int role)
+void QTypeColoriserProxy::setBaseRole(int role)
 {
     d_ptr->m_Role = role;
     Q_EMIT dataChanged(index(0,0), index(rowCount()-1, columnCount()-1));
