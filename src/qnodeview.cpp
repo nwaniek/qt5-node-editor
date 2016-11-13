@@ -62,3 +62,8 @@ GraphicsNode* QNodeView::getNode(const QModelIndex& idx) const
 
     return d_ptr->m_pFactory->getNode(factoryIdx);
 }
+
+QReactiveProxyModel* QNodeView::reactiveModel() const
+{
+    return &d_ptr->m_Proxy;
+}

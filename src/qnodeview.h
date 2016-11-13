@@ -4,7 +4,7 @@
 
 class QAbstractItemModel;
 class GraphicsNodeScene;
-
+class QReactiveProxyModel;
 class QNodeViewPrivate;
 
 class GraphicsNode;
@@ -23,6 +23,8 @@ public:
     GraphicsNode* getNode(const QModelIndex& idx) const;
 
     GraphicsNodeScene* scene() const; //TODO remove
+
+    QReactiveProxyModel* reactiveModel() const; //TODO try to find a better way
 
 private:
     QNodeViewPrivate* d_ptr;
