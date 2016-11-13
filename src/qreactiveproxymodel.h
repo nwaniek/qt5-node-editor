@@ -61,6 +61,10 @@ public:
     QList<QModelIndex> sendTo(const QModelIndex& source) const;
     QList<QModelIndex> receiveFrom(const QModelIndex& destination) const;
 
+Q_SIGNALS:
+    void connected(const QModelIndex& source, const QModelIndex& destination);
+    void disconnected(const QModelIndex& source, const QModelIndex& destination);
+
 private:
     QReactiveProxyModelPrivate* d_ptr;
     Q_DECLARE_PRIVATE(QReactiveProxyModel)

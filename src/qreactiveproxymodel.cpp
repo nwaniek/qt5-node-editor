@@ -279,6 +279,8 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
     // Sync the current source value into the sink
     d_ptr->synchronize(srcIdx, destIdx);
 
+    Q_EMIT connected(srcIdx, destIdx);
+
     return true;
 }
 
@@ -326,11 +328,17 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
 
     const auto conn = d_ptr->m_lConnections[index.row()];
 
+    const bool wasValid = conn->isValid();
+
     switch (role) {
         case QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX: // also DEST
             Q_ASSERT(index.column() != 1);
-            if (index.column() == QReactiveProxyModel::ConnectionsColumns::SOURCE) {
+            if (index.column() == QReactiveProxyModel::ConnectionsColumns::SOURCE && i != conn->source) {
                 d_ptr->m_hDirectMapping.remove(conn->sourceIP);
+
+                if (wasValid)
+                    Q_EMIT d_ptr->q_ptr->disconnected(conn->source, conn->destination);
+
                 conn->source = i;
 
                 if (i.isValid()) {
@@ -340,9 +348,16 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
                 else
                     conn->sourceIP = nullptr;
                 d_ptr->synchronize(conn->source, conn->destination);
+
+                if (conn->isValid())
+                    Q_EMIT d_ptr->q_ptr->connected(conn->source, conn->destination);
             }
-            else if (index.column() == QReactiveProxyModel::ConnectionsColumns::DESTINATION) {
+            else if (index.column() == QReactiveProxyModel::ConnectionsColumns::DESTINATION && i != conn->destination) {
                 d_ptr->m_hDirectMapping.remove(conn->destinationIP);
+
+                if (wasValid)
+                    Q_EMIT d_ptr->q_ptr->disconnected(conn->source, conn->destination);
+
                 conn->destination = i;
 
                 if (i.isValid()) {
@@ -352,6 +367,9 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
                 else
                     conn->destinationIP = nullptr;
                 d_ptr->synchronize(conn->source, conn->destination);
+
+                if (conn->isValid())
+                    Q_EMIT d_ptr->q_ptr->connected(conn->source, conn->destination);
 
                 //FIXME this may require a beginInsertRows
             }
