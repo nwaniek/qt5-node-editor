@@ -61,6 +61,9 @@ public:
 
     QAbstractProxyModel* m_pCurrentProxy {nullptr};
 
+    bool m_HasExtraRole[4] {false, false, false, false};
+    int  m_ExtraRole   [4] {0,     0,     0,     0    };
+
     // In case dataChanged() contains a single QModelIndex, use this fast path
     // to avoid doing a query on each connections or QModelIndex
     QHash<void*, ConnectionHolder*> m_hDirectMapping;
@@ -69,6 +72,11 @@ public:
     void clear();
     bool synchronize(const QModelIndex& source, const QModelIndex& destination) const;
     ConnectionHolder* newConnection();
+
+    void notifyConnect(const QModelIndex& source, const QModelIndex& destination) const;
+    void notifyDisconnect(const QModelIndex& source, const QModelIndex& destination) const;
+    void notifyConnect(const ConnectionHolder* conn) const;
+    void notifyDisconnect(const ConnectionHolder* conn) const;
 
     QReactiveProxyModel* q_ptr;
 public Q_SLOTS:
@@ -231,6 +239,17 @@ QAbstractItemModel* QReactiveProxyModel::connectionsModel() const
     return d_ptr->m_pConnectionModel;
 }
 
+int QReactiveProxyModel::extraRole(ExtraRoles type) const
+{
+    return d_ptr->m_ExtraRole[static_cast<int>(type)];
+}
+
+void QReactiveProxyModel::setExtraRole(ExtraRoles type, int role)
+{
+    d_ptr->m_HasExtraRole[static_cast<int>(type)] = true;
+    d_ptr->m_ExtraRole   [static_cast<int>(type)] = role;
+}
+
 ConnectionHolder* QReactiveProxyModelPrivate::newConnection()
 {
     if (m_lConnections.isEmpty() || m_lConnections.last()->isUsed()) {
@@ -279,7 +298,7 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
     // Sync the current source value into the sink
     d_ptr->synchronize(srcIdx, destIdx);
 
-    Q_EMIT connected(srcIdx, destIdx);
+    d_ptr->notifyConnect(srcIdx, destIdx);
 
     return true;
 }
@@ -350,7 +369,7 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
                 d_ptr->synchronize(conn->source, conn->destination);
 
                 if (conn->isValid())
-                    Q_EMIT d_ptr->q_ptr->connected(conn->source, conn->destination);
+                    d_ptr->notifyConnect(conn->source, conn->destination);
             }
             else if (index.column() == QReactiveProxyModel::ConnectionsColumns::DESTINATION && i != conn->destination) {
                 d_ptr->m_hDirectMapping.remove(conn->destinationIP);
@@ -369,7 +388,7 @@ bool ConnectedIndicesModel::setData(const QModelIndex &index, const QVariant &va
                 d_ptr->synchronize(conn->source, conn->destination);
 
                 if (conn->isValid())
-                    Q_EMIT d_ptr->q_ptr->connected(conn->source, conn->destination);
+                    d_ptr->notifyConnect(conn->source, conn->destination);
 
                 //FIXME this may require a beginInsertRows
             }
@@ -428,8 +447,49 @@ int ConnectedIndicesModel::columnCount(const QModelIndex& parent) const
 void QReactiveProxyModelPrivate::clear()
 {
     while (!m_lConnections.isEmpty()) {
+        notifyDisconnect(m_lConnections.first());
         delete m_lConnections.first();
     }
+}
+
+void QReactiveProxyModelPrivate::notifyConnect(const QModelIndex& source, const QModelIndex& destination) const
+{
+    typedef QReactiveProxyModel::ExtraRoles R;
+
+    Q_EMIT q_ptr->connected(source, destination);
+
+    if (m_HasExtraRole[(int)R::SourceConnectionNotificationRole]) {
+        q_ptr->setData(source, destination, m_ExtraRole[(int)R::SourceConnectionNotificationRole]);
+    }
+
+    if (m_HasExtraRole[(int)R::DestinationConnectionNotificationRole])
+        q_ptr->setData(source, source, m_ExtraRole[(int)R::DestinationConnectionNotificationRole]);
+
+}
+
+void QReactiveProxyModelPrivate::notifyDisconnect(const QModelIndex& source, const QModelIndex& destination) const
+{
+    typedef QReactiveProxyModel::ExtraRoles R;
+
+    Q_EMIT q_ptr->disconnected(source, destination);
+
+    if (m_HasExtraRole[(int)R::SourceDisconnectionNotificationRole])
+        q_ptr->setData(source, destination, m_ExtraRole[(int)R::SourceDisconnectionNotificationRole]);
+
+    if (m_HasExtraRole[(int)R::DestinationDisconnectionNotificationRole])
+        q_ptr->setData(source, source, m_ExtraRole[(int)R::DestinationDisconnectionNotificationRole]);
+}
+
+void QReactiveProxyModelPrivate::notifyConnect(const ConnectionHolder* conn) const
+{
+    if (conn->isValid())
+        notifyConnect(conn->source, conn->destination);
+}
+
+void QReactiveProxyModelPrivate::notifyDisconnect(const ConnectionHolder* conn) const
+{
+    if (conn->isValid())
+        notifyDisconnect(conn->source, conn->destination);
 }
 
 bool QReactiveProxyModelPrivate::synchronize(const QModelIndex& s, const QModelIndex& d) const

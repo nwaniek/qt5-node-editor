@@ -50,6 +50,17 @@ public:
     void addConnectedRole(int role);
     QVector<int> connectedRoles() const;
 
+    enum class ExtraRoles {
+        SourceConnectionNotificationRole,
+        DestinationConnectionNotificationRole,
+        SourceDisconnectionNotificationRole,
+        DestinationDisconnectionNotificationRole,
+    };
+
+    int extraRole(ExtraRoles type) const;
+
+    void setExtraRole(ExtraRoles type, int role);
+
     QAbstractItemModel *connectionsModel() const;
 
     QAbstractProxyModel* currentProxy() const;
