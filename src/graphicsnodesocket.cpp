@@ -29,13 +29,7 @@
 #include "graphicsbezieredge_p.h"
 
 GraphicsNodeSocket::
-GraphicsNodeSocket(const QModelIndex& index, SocketType type, GraphicsNode *parent)
-: GraphicsNodeSocket(index, type, QString(), parent)
-{ }
-
-
-GraphicsNodeSocket::
-GraphicsNodeSocket(const QModelIndex& index, SocketType socket_type, const QString &text, GraphicsNode *parent, QObject *data,int index2)
+GraphicsNodeSocket(const QModelIndex& index, SocketType socket_type, GraphicsNode *parent)
 : QObject(), d_ptr(new GraphicsNodeSocketPrivate(this))
 {
     d_ptr->m_PersistentIndex = index;
@@ -44,9 +38,6 @@ GraphicsNodeSocket(const QModelIndex& index, SocketType socket_type, const QStri
 
     d_ptr->_brush_circle = (socket_type == SocketType::SINK) ?
         BRUSH_COLOR_SINK : BRUSH_COLOR_SOURCE;
-
-    d_ptr->_text = text;
-    d_ptr->_node = parent;
 
     d_ptr->_pen_circle.setWidth(0);
 
@@ -108,7 +99,7 @@ minimalSize() const {
     // Assumes the theme doesn't change
     static QFontMetrics fm({});
     static const qreal  text_height = static_cast<qreal>(fm.height());
-    const int           text_width  = fm.width(d_ptr->_text);
+    const int           text_width  = fm.width(text());
 
     return {
         std::max(
@@ -161,7 +152,7 @@ drawAlignedText(QPainter *painter)
     const auto fg = m_PersistentIndex.data(Qt::ForegroundRole);
 
     painter->setPen(fg.canConvert<QPen>() ? qvariant_cast<QPen>(fg) : _pen_text);
-    painter->drawText(rect, flags, _text, 0);
+    painter->drawText(rect, flags, m_PersistentIndex.data().toString(), 0);
 }
 
 
@@ -259,32 +250,19 @@ bool GraphicsNodeSocket::isEnabled() const
 QString GraphicsNodeSocket::
 text() const
 {
-    return d_ptr->_text;
+    return d_ptr->m_PersistentIndex.data().toString();
 }
 
 void GraphicsNodeSocket::
 setText(const QString& t)
 {
-    d_ptr->_text = t;
-}
-
-GraphicsNode *GraphicsNodeSocket::
-source() const
-{
-    return nullptr; //TODO remove or fix
-}
-
-GraphicsNode *GraphicsNodeSocket::
-sink() const
-{
-    return nullptr; //TODO remove or fix
+    if (auto m = const_cast<QAbstractItemModel*>(d_ptr->m_PersistentIndex.model()))
+        m->setData(d_ptr->m_PersistentIndex, t, Qt::DisplayRole);
 }
 
 void GraphicsNodeSocketPrivate::update()
 {
-    auto m = const_cast<QAbstractItemModel*>(m_PersistentIndex.model());
-
-    if (m_PersistentIndex.model())
+    if (auto m = const_cast<QAbstractItemModel*>(m_PersistentIndex.model()))
         Q_EMIT m->dataChanged(m_PersistentIndex, m_PersistentIndex);
 }
 

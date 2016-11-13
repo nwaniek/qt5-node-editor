@@ -451,10 +451,7 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
             auto s = new GraphicsNodeSocket(
                 idx,
                 GraphicsNodeSocket::SocketType::SOURCE,
-                idx.data().toString(),
-                nodew->m_pNode,
-                (QObject*) q_ptr->sourceModel(),
-                i
+                nodew->m_pNode
             );
             nodew->m_lSourcesToSrc.resize(
                 std::max(i+1,nodew->m_lSourcesToSrc.size())
@@ -474,10 +471,7 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
             auto s = new GraphicsNodeSocket(
                 idx,
                 GraphicsNodeSocket::SocketType::SINK,
-                idx.data().toString(),
-                nodew->m_pNode,
-                (QObject*) q_ptr->sourceModel(),
-                i
+                nodew->m_pNode
             );
             nodew->m_lSinksToSrc.resize(
                 std::max(i+1,nodew->m_lSinksToSrc.size())
