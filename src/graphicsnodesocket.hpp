@@ -30,7 +30,7 @@ class GraphicsNodeSocket : public QObject
     friend class GraphicsNodePrivate; // for notifyPositionChange //TODO remove
     friend class GraphicsDirectedEdgePrivate; // could be removed once the model is ready
     friend class GraphicsNodeView; //for the view helpers, could be removed
-    friend class QNodeEditorSocketModelPrivate; // For the constructor
+    friend class SocketWrapper; // For the constructor
 public:
     /*
     * the socket comes in two flavors: either as sink or as source for a

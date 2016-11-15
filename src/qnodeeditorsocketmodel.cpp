@@ -11,6 +11,7 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QMimeData>
+#include <QtCore/QSortFilterProxyModel>
 
 #include "qobjectmodel.h" //TODO remove
 
@@ -23,23 +24,67 @@ const T& qAsConst(const T& v)
 }
 #endif
 
+class NodeEdgeFilterProxy;
+
+struct EdgeWrapper;
+
+struct SocketWrapper
+{
+    SocketWrapper(const QModelIndex& idx, GraphicsNodeSocket::SocketType t, GraphicsNode* n)
+        : m_Socket(idx, t, n) {}
+
+    GraphicsNodeSocket m_Socket;
+
+    EdgeWrapper* m_EdgeWrapper {Q_NULLPTR};
+};
+
 struct NodeWrapper final
 {
-    ~NodeWrapper() {
-        delete m_pNode;
-    }
+    NodeWrapper(QNodeEditorSocketModel *q, const QPersistentModelIndex& i) : m_Node(q, i) {}
 
-    GraphicsNode* m_pNode;
+    GraphicsNode m_Node;
 
     // Keep aligned with the source row
-    QVector<GraphicsNodeSocket*> m_lSourcesToSrc; //TODO would a QHash make sense?
-    QVector<GraphicsNodeSocket*> m_lSinksToSrc; //TODO would a QHash make sense?
+    QVector<int> m_lSourcesFromSrc {};
+    QVector<int> m_lSinksFromSrc {};
+
+    QVector<int> m_lSourcesToSrc {};
+    QVector<int> m_lSinksToSrc {};
 
     // Keep aligned with the node row
-    QVector<GraphicsNodeSocket*> m_lSources;
-    QVector<GraphicsNodeSocket*> m_lSinks;
+    QVector<SocketWrapper*> m_lSources {};
+    QVector<SocketWrapper*> m_lSinks {};
+
+    mutable NodeEdgeFilterProxy *m_pSourceProxy {Q_NULLPTR};
+    mutable NodeEdgeFilterProxy *m_pSinkProxy {Q_NULLPTR};
 
     QRectF m_SceneRect;
+};
+
+//TODO split the "data" and "proxy" part of this class and use it to replace
+// the NodeWrapper:: content. This way, getting an on demand proxy will cost
+// "nothing"
+class NodeEdgeFilterProxy final : public QAbstractProxyModel
+{
+    Q_OBJECT
+public:
+    explicit NodeEdgeFilterProxy(QNodeEditorSocketModelPrivate* d, NodeWrapper *w, GraphicsNodeSocket::SocketType t);
+
+    virtual int rowCount(const QModelIndex& parent = {}) const override;
+    virtual QModelIndex mapFromSource(const QModelIndex& sourceIndex) const override;
+    virtual QModelIndex mapToSource(const QModelIndex& proxyIndex) const override;
+    virtual int columnCount(const QModelIndex& parent = {}) const override;
+    virtual QModelIndex index(int row, int column, const QModelIndex& parent ={}) const override;
+    virtual QModelIndex parent(const QModelIndex& idx) const override;
+
+private:
+    const GraphicsNodeSocket::SocketType m_Type;
+    const NodeWrapper *m_pWrapper;
+
+    // Helpers
+    void processRow(const QModelIndex& srcIdx);
+
+    QNodeEditorSocketModelPrivate* d_ptr;
 };
 
 struct EdgeWrapper final
@@ -48,14 +93,15 @@ struct EdgeWrapper final
         : m_Edge(m, index)
     { Q_ASSERT(index.isValid()); }
 
-    GraphicsNodeSocket* m_pSource {Q_NULLPTR};
-    GraphicsBezierEdge  m_Edge               ;
-    GraphicsNodeSocket* m_pSink   {Q_NULLPTR};
-    bool                m_IsShown {  false  };
+    SocketWrapper*     m_pSource {Q_NULLPTR};
+    GraphicsBezierEdge m_Edge               ;
+    SocketWrapper*     m_pSink   {Q_NULLPTR};
+    bool               m_IsShown {  false  };
 };
 
 class QNodeEditorSocketModelPrivate final : public QObject
 {
+    Q_OBJECT
 public:
     enum class State {
         NORMAL,
@@ -72,7 +118,7 @@ public:
     quint32               m_CurrentTypeId {QMetaType::UnknownType};
 
     // helper
-    GraphicsNode* insertNode(int idx, const QString& title);
+    GraphicsNode* insertNode(int idx);
     NodeWrapper*  getNode(const QModelIndex& idx, bool r = false) const;
 
     void insertSockets(const QModelIndex& parent, int first, int last);
@@ -84,6 +130,17 @@ public:
         GraphicsNodeSocket::SocketType type,
         const QPointF&                 point
     );
+
+    // Use a template so the compiler can safely inline the result
+    template<
+        QVector<int> NodeWrapper::* SM,
+        QVector<SocketWrapper*> NodeWrapper::* S,
+        SocketWrapper* EdgeWrapper::* E
+    >
+    inline SocketWrapper* getSocketCommon(const QModelIndex& idx) const;
+
+    SocketWrapper* getSourceSocket(const QModelIndex& idx) const;
+    SocketWrapper* getSinkSocket(const QModelIndex& idx) const;
 
     QNodeEditorSocketModel* q_ptr;
 
@@ -188,7 +245,7 @@ QMimeData *QNodeEditorSocketModel::mimeData(const QModelIndexList &idxs) const
                 &QNodeEditorSocketModelPrivate::exitDraggingMode);
 
             for (auto n : qAsConst(d_ptr->m_lWrappers))
-                n->m_pNode->update();
+                n->m_Node.update();
         }
     }
 
@@ -213,7 +270,7 @@ void QNodeEditorSocketModelPrivate::exitDraggingMode()
     m_State = QNodeEditorSocketModelPrivate::State::NORMAL;
 
     for (auto n : qAsConst(m_lWrappers))
-        n->m_pNode->update();
+        n->m_Node.update();
 }
 
 GraphicsNodeScene* QNodeEditorSocketModel::scene() const
@@ -249,55 +306,69 @@ GraphicsNode* QNodeEditorSocketModel::getNode(const QModelIndex& idx, bool recur
 
     auto nodew = d_ptr->getNode(i);
 
-    return nodew ? nodew->m_pNode : Q_NULLPTR;
+    return nodew ? &nodew->m_Node : Q_NULLPTR;
 }
 
-QVector<GraphicsNodeSocket*> QNodeEditorSocketModel::getSourceSockets(const QModelIndex& idx) const
+template<
+    QVector<int> NodeWrapper::* SM,
+    QVector<SocketWrapper*> NodeWrapper::* S,
+    SocketWrapper* EdgeWrapper::* E
+>
+SocketWrapper* QNodeEditorSocketModelPrivate::getSocketCommon(const QModelIndex& idx) const
 {
-    const auto nodew = d_ptr->getNode(idx);
+    // Use some dark template metamagic. This could have been done otherwise
 
-    return nodew ? nodew->m_lSources : QVector<GraphicsNodeSocket*>();
+    if (!idx.parent().isValid())
+        return Q_NULLPTR;
+
+    if (idx.model() == q_ptr->edgeModel()) {
+        const EdgeWrapper* e = m_lEdges[idx.row()];
+        return (*e).*E;
+    }
+
+    const NodeWrapper* nodew = getNode(idx, true);
+
+    if (!nodew)
+        return Q_NULLPTR;
+
+    // The -1 is because int defaults to 0 and invalid is -1
+    const int relIdx = ((*nodew).*SM).size() > idx.row() ?
+        ((*nodew).*SM)[idx.row()] - 1 : -1;
+
+    auto ret = relIdx != -1 ? ((*nodew).*S)[relIdx] : Q_NULLPTR;
+
+    Q_ASSERT((!ret) || ret->m_Socket.index() == idx);
+
+    return ret;
 }
 
-QVector<GraphicsNodeSocket*> QNodeEditorSocketModel::getSinkSockets(const QModelIndex& idx) const
-{
-    const auto nodew = d_ptr->getNode(idx);
 
-    return nodew ? nodew->m_lSinks : QVector<GraphicsNodeSocket*>();
+SocketWrapper* QNodeEditorSocketModelPrivate::getSourceSocket(const QModelIndex& idx) const
+{
+    return getSocketCommon<
+        &NodeWrapper::m_lSourcesFromSrc, &NodeWrapper::m_lSources, &EdgeWrapper::m_pSource
+    >(idx);
+}
+
+SocketWrapper* QNodeEditorSocketModelPrivate::getSinkSocket(const QModelIndex& idx) const
+{
+    return getSocketCommon<
+        &NodeWrapper::m_lSinksFromSrc, &NodeWrapper::m_lSinks, &EdgeWrapper::m_pSink
+    >(idx);
 }
 
 GraphicsNodeSocket* QNodeEditorSocketModel::getSourceSocket(const QModelIndex& idx)
 {
-    if (!idx.parent().isValid())
-        return Q_NULLPTR;
-
-    if (idx.model() == edgeModel())
-        return d_ptr->m_lEdges[idx.row()]->m_pSource;
-
-    const auto nodew = d_ptr->getNode(idx, true);
-
-    if (!nodew)
-        return Q_NULLPTR;
-
-    return nodew->m_lSourcesToSrc.size() > idx.row() ?
-        nodew->m_lSourcesToSrc[idx.row()] : Q_NULLPTR;
+    return &d_ptr->getSocketCommon<
+        &NodeWrapper::m_lSourcesFromSrc, &NodeWrapper::m_lSources, &EdgeWrapper::m_pSource
+    >(idx)->m_Socket;
 }
 
 GraphicsNodeSocket* QNodeEditorSocketModel::getSinkSocket(const QModelIndex& idx)
 {
-    if (!idx.parent().isValid())
-        return Q_NULLPTR;
-
-    if (idx.model() == edgeModel())
-        return d_ptr->m_lEdges[idx.row()]->m_pSink;
-
-    const auto nodew = d_ptr->getNode(idx, true);
-
-    if (!nodew)
-        return Q_NULLPTR;
-
-    return nodew->m_lSinksToSrc.size() > idx.row() ?
-        nodew->m_lSinksToSrc[idx.row()] : Q_NULLPTR;
+    return &d_ptr->getSocketCommon<
+        &NodeWrapper::m_lSinksFromSrc, &NodeWrapper::m_lSinks, &EdgeWrapper::m_pSink
+    >(idx)->m_Socket;
 }
 
 GraphicsDirectedEdge* QNodeEditorSocketModel::getSourceEdge(const QModelIndex& idx)
@@ -359,6 +430,40 @@ GraphicsDirectedEdge* QNodeEditorSocketModel::initiateConnectionFromSink(const Q
     );
 }
 
+QAbstractItemModel *QNodeEditorSocketModel::sinkSocketModel(const QModelIndex& node) const
+{
+    auto n = d_ptr->getNode(node);
+
+    if (!n)
+        return Q_NULLPTR;
+
+    if (!n->m_pSinkProxy)
+        n->m_pSinkProxy = new NodeEdgeFilterProxy(
+            d_ptr,
+            n,
+            GraphicsNodeSocket::SocketType::SINK
+        );
+
+    return n->m_pSinkProxy;
+}
+
+QAbstractItemModel *QNodeEditorSocketModel::sourceSocketModel(const QModelIndex& node) const
+{
+    auto n = d_ptr->getNode(node);
+
+    if (!n)
+        return Q_NULLPTR;
+
+    if (!n->m_pSourceProxy)
+        n->m_pSourceProxy = new NodeEdgeFilterProxy(
+            d_ptr,
+            n,
+            GraphicsNodeSocket::SocketType::SOURCE
+        );
+
+    return n->m_pSourceProxy;
+}
+
 void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, int first, int last)
 {
     if (last < first) return;
@@ -368,7 +473,7 @@ void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, 
         for (int i = first; i <= last; i++) {
             const auto idx = q_ptr->index(i, 0);
             if (idx.isValid()) {
-                insertNode(idx.row(), idx.data().toString());
+                insertNode(idx.row());
                 slotRowsInserted(idx, 0, q_ptr->rowCount(idx));
             }
         }
@@ -377,7 +482,7 @@ void QNodeEditorSocketModelPrivate::slotRowsInserted(const QModelIndex& parent, 
         insertSockets(parent, first, last);
 }
 
-GraphicsNode* QNodeEditorSocketModelPrivate::insertNode(int idx, const QString& title)
+GraphicsNode* QNodeEditorSocketModelPrivate::insertNode(int idx)
 {
     const auto idx2 = q_ptr->index(idx, 0);
 
@@ -386,18 +491,13 @@ GraphicsNode* QNodeEditorSocketModelPrivate::insertNode(int idx, const QString& 
     if (idx == 0 && m_lWrappers.size())
         Q_ASSERT(false);
 
-    auto n = new GraphicsNode(q_ptr, idx2);
-    n->setTitle(title);
-
-    auto nw = new NodeWrapper{
-        n, {}, {}, {}, {}, {}
-    };
+    auto nw = new NodeWrapper(q_ptr, idx2);
 
     m_lWrappers.insert(idx, nw);
 
-    m_pScene->addItem(n->graphicsItem());
+    m_pScene->addItem(nw->m_Node.graphicsItem());
 
-    return n;
+    return &nw->m_Node;
 }
 
 NodeWrapper* QNodeEditorSocketModelPrivate::getNode(const QModelIndex& idx, bool r) const
@@ -448,16 +548,17 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
 
         // SOURCES
         if ((idx.flags() & sourceFlags) == sourceFlags) {
-            auto s = new GraphicsNodeSocket(
+            auto s = new SocketWrapper(
                 idx,
                 GraphicsNodeSocket::SocketType::SOURCE,
-                nodew->m_pNode
+                &nodew->m_Node
             );
-            nodew->m_lSourcesToSrc.resize(
-                std::max(i+1,nodew->m_lSourcesToSrc.size())
+            nodew->m_lSourcesFromSrc.resize(
+                std::max(i+1,nodew->m_lSourcesFromSrc.size())
             );
-            nodew->m_lSourcesToSrc.insert(i, s);
+            nodew->m_lSourcesFromSrc.insert(i, nodew->m_lSources.size() + 1);
             nodew->m_lSources << s;
+            nodew->m_lSourcesToSrc << i;
         }
 
         constexpr static const Qt::ItemFlags sinkFlags(
@@ -468,19 +569,20 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
 
         // SINKS
         if ((idx.flags() & sinkFlags) == sinkFlags) {
-            auto s = new GraphicsNodeSocket(
+            auto s = new SocketWrapper(
                 idx,
                 GraphicsNodeSocket::SocketType::SINK,
-                nodew->m_pNode
+                &nodew->m_Node
             );
-            nodew->m_lSinksToSrc.resize(
-                std::max(i+1,nodew->m_lSinksToSrc.size())
+            nodew->m_lSinksFromSrc.resize(
+                std::max(i+1,nodew->m_lSinksFromSrc.size())
             );
-            nodew->m_lSinksToSrc.insert(i, s);
+            nodew->m_lSinksFromSrc.insert(i, nodew->m_lSinks.size() + 1);
             nodew->m_lSinks << s;
+            nodew->m_lSinksToSrc << i;
         }
 
-        nodew->m_pNode->update();
+        nodew->m_Node.update();
     }
 }
 
@@ -503,7 +605,7 @@ void QNodeEditorSocketModelPrivate::removeSockets(const QModelIndex& parent, int
 QNodeEditorEdgeModel::QNodeEditorEdgeModel(QNodeEditorSocketModelPrivate* parent)
     : QIdentityProxyModel(parent), d_ptr(parent)
 {
-    
+
 }
 
 QNodeEditorEdgeModel::~QNodeEditorEdgeModel()
@@ -583,10 +685,10 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
     }
 
     auto sock = (!idx.column()) ?
-        d_ptr->q_ptr->getSourceSocket(srcIdx) : d_ptr->q_ptr->getSinkSocket(srcIdx);
+        d_ptr->getSourceSocket(srcIdx) : d_ptr->getSinkSocket(srcIdx);
 
     if (sock && role == Qt::SizeHintRole)
-        return sock->graphicsItem()->mapToScene(0,0);
+        return sock->m_Socket.graphicsItem()->mapToScene(0,0);
 
     return QIdentityProxyModel::data(idx, role);
 }
@@ -633,17 +735,17 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
         auto oldSrc(e->m_pSource), oldSink(e->m_pSink);
 
         // Update the node mapping
-        if ((e->m_pSource = q_ptr->getSourceSocket(src)))
-            e->m_pSource->setEdge(m_EdgeModel.index(i, 0));
+        if ((e->m_pSource = getSourceSocket(src)))
+            e->m_pSource->m_Socket.setEdge(m_EdgeModel.index(i, 0));
 
         if (oldSrc && oldSrc != e->m_pSource)
-            oldSrc->setEdge({});
+            oldSrc->m_Socket.setEdge({});
 
-        if ((e->m_pSink = q_ptr->getSinkSocket(sink)))
-            e->m_pSink->setEdge(m_EdgeModel.index(i, 2));
+        if ((e->m_pSink = getSinkSocket(sink)))
+            e->m_pSink->m_Socket.setEdge(m_EdgeModel.index(i, 2));
 
         if (oldSink && oldSink != e->m_pSink)
-            oldSink->setEdge({});
+            oldSink->m_Socket.setEdge({});
 
         // Update the graphic item
         const bool isUsed = e->m_pSource || e->m_pSink;
@@ -663,3 +765,96 @@ QNodeEditorSocketModel* QNodeEditorEdgeModel::socketModel() const
 {
     return d_ptr->q_ptr;
 }
+
+NodeEdgeFilterProxy::NodeEdgeFilterProxy(QNodeEditorSocketModelPrivate* d, NodeWrapper *w, GraphicsNodeSocket::SocketType t) :
+    QAbstractProxyModel(d), m_Type(t), m_pWrapper(w), d_ptr(d)
+{
+    setSourceModel(d->q_ptr);
+}
+
+int NodeEdgeFilterProxy::rowCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+        return 0;
+
+    switch (m_Type) {
+        case GraphicsNodeSocket::SocketType::SOURCE:
+            return m_pWrapper->m_lSources.size();
+        case GraphicsNodeSocket::SocketType::SINK:
+            return m_pWrapper->m_lSinks.size();
+    }
+
+    return 0;
+}
+
+QModelIndex NodeEdgeFilterProxy::mapFromSource(const QModelIndex& srcIdx) const
+{
+    static const auto check = [](
+        const QVector<int>& l, const QModelIndex& src, const GraphicsNode* n
+    ) -> bool {
+        return src.isValid()
+            && l.size() > src.row()
+            && n->index() == src.parent()
+            && l[src.row()];
+    };
+
+    switch (m_Type) {
+        case GraphicsNodeSocket::SocketType::SOURCE:
+            if (check(m_pWrapper->m_lSourcesFromSrc, srcIdx, &m_pWrapper->m_Node))
+                return createIndex(m_pWrapper->m_lSourcesFromSrc[srcIdx.row()] - 1, 0, Q_NULLPTR);
+        case GraphicsNodeSocket::SocketType::SINK:
+            if (check(m_pWrapper->m_lSinksFromSrc, srcIdx, &m_pWrapper->m_Node))
+                return createIndex(m_pWrapper->m_lSinksFromSrc[srcIdx.row()] - 1, 0, Q_NULLPTR);
+    }
+
+    return {};
+}
+
+QModelIndex NodeEdgeFilterProxy::mapToSource(const QModelIndex& proxyIndex) const
+{
+    if ((!proxyIndex.isValid()) || proxyIndex.model() != this)
+        return {};
+
+    const auto srcP = m_pWrapper->m_Node.index();
+
+    switch (m_Type) {
+        case GraphicsNodeSocket::SocketType::SOURCE:
+            return d_ptr->q_ptr->index(m_pWrapper->m_lSourcesToSrc[proxyIndex.row()], 0, srcP);
+        case GraphicsNodeSocket::SocketType::SINK:
+            return d_ptr->q_ptr->index(m_pWrapper->m_lSinksToSrc[proxyIndex.row()], 0, srcP);
+    }
+
+    return {};
+}
+
+int NodeEdgeFilterProxy::columnCount(const QModelIndex& parent) const
+{
+    return parent.isValid() ? 0 : 1;
+}
+
+QModelIndex NodeEdgeFilterProxy::index(int row, int column, const QModelIndex& parent) const
+{
+    if (parent.isValid() || row < 0 || column)
+        return {};
+
+    switch(m_Type) {
+        case GraphicsNodeSocket::SocketType::SOURCE:
+            if (row < m_pWrapper->m_lSources.size())
+                return createIndex(row, 0, nullptr);
+            break;
+        case GraphicsNodeSocket::SocketType::SINK:
+            if (row < m_pWrapper->m_lSinks.size())
+                return createIndex(row, 0, nullptr);
+            break;
+    }
+
+    return {};
+}
+
+QModelIndex NodeEdgeFilterProxy::parent(const QModelIndex& idx) const
+{
+    Q_UNUSED(idx);
+    return {};
+}
+
+#include <qnodeeditorsocketmodel.moc>

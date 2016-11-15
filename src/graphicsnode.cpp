@@ -74,8 +74,6 @@ public:
     QGraphicsTextItem         *_title_item    {nullptr};
     QGraphicsProxyWidget      *_central_proxy {nullptr};
 
-    QString _title;
-
     // Helpers
     void updateGeometry();
     void updateSizeHints();
@@ -125,8 +123,28 @@ GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModel
 void GraphicsNode::
 setTitle(const QString &title)
 {
-    d_ptr->_title = title;
-    d_ptr->_title_item->setPlainText(title);
+    if (auto m = const_cast<QAbstractItemModel*>(d_ptr->m_Index.model()))
+        m->setData(d_ptr->m_Index, title, Qt::DisplayRole);
+
+    d_ptr->_title_item->setPlainText(d_ptr->m_Index.data().toString());
+}
+
+QString GraphicsNode::
+title() const
+{
+    return d_ptr->m_Index.data().toString();
+}
+
+QAbstractItemModel *GraphicsNode::
+sinkModel() const
+{
+    return d_ptr->m_pModel->sinkSocketModel(d_ptr->m_Index);
+}
+
+QAbstractItemModel *GraphicsNode::
+sourceModel() const
+{
+    return d_ptr->m_pModel->sourceSocketModel(d_ptr->m_Index);
 }
 
 int NodeGraphicsItem::
@@ -305,44 +323,49 @@ updateGeometry()
     // title
     _title_item->setTextWidth(m_Size.width());
 
-    qreal ypos1 = _top_margin;
+    qreal yposSink = _top_margin;
+    qreal yposSrc  = m_Size.height() - _bottom_margin;
 
-    for (auto s : qAsConst(m_pModel->getSinkSockets(m_Index))) {
-        const auto size = s->size();
+    const int count = m_pModel->rowCount(m_Index);
 
-        // sockets are centered around 0/0
-        s->graphicsItem()->setPos(0, ypos1 + size.height()/2.0);
-        s->d_ptr->update();
-        ypos1 += size.height() + _item_padding;
+    for (int i = 0; i < count; i++) {
+        const auto idx = m_pModel->index(i, 0, m_Index);
 
-        s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
-            1.0 : 0.1
-        );
-    }
+        // sinks
+        if (const auto s = m_pModel->getSinkSocket(idx)) {
+            const auto size = s->size();
 
-    // sources are placed bottom/right
-    qreal ypos2 = m_Size.height() - _bottom_margin;
+            s->graphicsItem()->setPos(0, yposSink + size.height()/2.0);
+            s->d_ptr->update();
+            yposSink += size.height() + _item_padding;
 
-    for (auto s : qAsConst(m_pModel->getSourceSockets(m_Index))) {
-        const auto size = s->size();
+            s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
+                1.0 : 0.1
+            );
+        }
 
-        ypos2 -= size.height();
-        s->graphicsItem()->setPos(m_Size.width(), ypos2 + size.height()/2.0);
-        s->d_ptr->update();
-        ypos2 -= _item_padding;
+        // sources
+        if (const auto s = m_pModel->getSourceSocket(idx)) {
+            const auto size = s->size();
 
-        s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
-            1.0 : 0.1
-        );
+            yposSrc -= size.height();
+            s->graphicsItem()->setPos(m_Size.width(), yposSrc + size.height()/2.0);
+            s->d_ptr->update();
+            yposSrc -= _item_padding;
+
+            s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
+                1.0 : 0.1
+            );
+        }
     }
 
     // central widget
     if (_central_proxy) {
         _central_proxy->setGeometry({
             _lr_padding,
-            ypos1,
+            yposSink,
             m_Size.width() - 2.0 * _lr_padding,
-            ypos2 - ypos1
+            yposSrc - yposSink
         });
     }
 
@@ -367,12 +390,16 @@ void GraphicsNodePrivate::
 updateSizeHints() {
     qreal min_width(0.0), min_height(_top_margin + _bottom_margin);
 
-    // sinks
-    for (auto s : qAsConst(m_pModel->getSinkSockets(m_Index))) {
-        auto size = s->minimalSize();
+    const int count = m_pModel->rowCount(m_Index);
 
-        min_height += size.height() + _item_padding;
-        min_width   = std::max(size.width(), min_width);
+    // sinks
+    for (int i = 0; i < count; i++) {
+        if (const auto s = m_pModel->getSinkSocket(m_pModel->index(i, 0, m_Index))) {
+            auto size = s->minimalSize();
+
+            min_height += size.height() + _item_padding;
+            min_width   = std::max(size.width(), min_width);
+        }
     }
 
     // central widget
@@ -404,11 +431,13 @@ updateSizeHints() {
     }
 
     // sources
-    for (auto s : qAsConst(m_pModel->getSourceSockets(m_Index))) {
-        const auto size = s->minimalSize();
+    for (int i = 0; i < count; i++) {
+        if (const auto s = m_pModel->getSourceSocket(m_pModel->index(i, 0, m_Index))) {
+            const auto size = s->minimalSize();
 
-        min_height += size.height() + _item_padding;
-        min_width   = std::max(size.width(), min_width);
+            min_height += size.height() + _item_padding;
+            min_width   = std::max(size.width(), min_width);
+        }
     }
 
     m_MinSize = {

@@ -26,6 +26,7 @@ struct InternalItem
     QAbstractItemModel*    m_pModel;
     InternalItem*          m_pParent;
     QVector<InternalItem*> m_lChildren;
+    QString                m_Title;
 };
 
 class QMultiModelTreePrivate : public QObject
@@ -73,8 +74,8 @@ QVariant QMultiModelTree::data(const QModelIndex& idx, int role) const
 
     switch (role) {
         case Qt::DisplayRole:
-            return i->m_pModel->objectName().isEmpty() ?
-                QStringLiteral("N/A") : i->m_pModel->objectName();
+            return i->m_Title.isEmpty() ?
+                i->m_Title : i->m_pModel->objectName();
     };
 
     return {};
@@ -85,10 +86,19 @@ bool QMultiModelTree::setData(const QModelIndex &index, const QVariant &value, i
     if (!index.isValid())
         return {};
 
-    const auto i = static_cast<InternalItem*>(index.internalPointer());
+    auto i = static_cast<InternalItem*>(index.internalPointer());
 
-    if (i->m_Mode == InternalItem::Mode::PROXY)
-        return i->m_pModel->setData(mapToSource(index), value, role);
+    switch(i->m_Mode) {
+        case InternalItem::Mode::PROXY:
+            return i->m_pModel->setData(mapToSource(index), value, role);
+        case InternalItem::Mode::ROOT:
+            switch(role) {
+                case Qt::DisplayRole:
+                case Qt::EditRole:
+                    i->m_Title = value.toString();
+            }
+            break;
+    };
 
     return false;
 }
@@ -194,7 +204,8 @@ void QMultiModelTreePrivate::slotAddRows(const QModelIndex& parent, int first, i
             InternalItem::Mode::PROXY,
             src,
             p,
-            {}
+            {},
+            QStringLiteral("N/A")
         };
     }
     q_ptr->endInsertRows();

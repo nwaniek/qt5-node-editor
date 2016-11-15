@@ -35,6 +35,11 @@ public:
 
     void setTitle(const QString &title);
 
+    QString title() const;
+
+    Q_INVOKABLE QAbstractItemModel *sinkModel() const;
+    Q_INVOKABLE QAbstractItemModel *sourceModel() const;
+
     void setSize(const qreal width, const qreal height);
     void setSize(const QSizeF size);
     void setSize(const QPointF size);

@@ -69,15 +69,15 @@ public:
 
     GraphicsNodeScene* scene() const;
 
-    QVector<GraphicsNodeSocket*> getSourceSockets(const QModelIndex& idx) const;
-    QVector<GraphicsNodeSocket*> getSinkSockets(const QModelIndex& idx) const;
-
     GraphicsNode*       getNode(const QModelIndex& idx, bool recursive = false);
     GraphicsNodeSocket* getSourceSocket(const QModelIndex& idx);
     GraphicsNodeSocket* getSinkSocket(const QModelIndex& idx);
 
     GraphicsDirectedEdge* getSourceEdge(const QModelIndex& idx);
     GraphicsDirectedEdge* getSinkEdge(const QModelIndex& idx);
+
+    Q_INVOKABLE QAbstractItemModel *sinkSocketModel(const QModelIndex& node) const;
+    Q_INVOKABLE QAbstractItemModel *sourceSocketModel(const QModelIndex& node) const;
 
     //TODO in later iterations of the API, add partial connections to the QNodeEditorEdgeModel
     GraphicsDirectedEdge* initiateConnectionFromSource(const QModelIndex& index, const QPointF& point);
