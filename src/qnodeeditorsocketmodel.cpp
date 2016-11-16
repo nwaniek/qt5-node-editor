@@ -24,19 +24,10 @@ const T& qAsConst(const T& v)
 }
 #endif
 
-class NodeEdgeFilterProxy;
+class QNodeEdgeFilterProxy;
 
 struct EdgeWrapper;
-
-struct SocketWrapper
-{
-    SocketWrapper(const QModelIndex& idx, GraphicsNodeSocket::SocketType t, GraphicsNode* n)
-        : m_Socket(idx, t, n) {}
-
-    GraphicsNodeSocket m_Socket;
-
-    EdgeWrapper* m_EdgeWrapper {Q_NULLPTR};
-};
+struct SocketWrapper;
 
 struct NodeWrapper final
 {
@@ -55,27 +46,44 @@ struct NodeWrapper final
     QVector<SocketWrapper*> m_lSources {};
     QVector<SocketWrapper*> m_lSinks {};
 
-    mutable NodeEdgeFilterProxy *m_pSourceProxy {Q_NULLPTR};
-    mutable NodeEdgeFilterProxy *m_pSinkProxy {Q_NULLPTR};
+    mutable QNodeEdgeFilterProxy *m_pSourceProxy {Q_NULLPTR};
+    mutable QNodeEdgeFilterProxy *m_pSinkProxy {Q_NULLPTR};
 
     QRectF m_SceneRect;
+};
+
+struct SocketWrapper
+{
+    SocketWrapper(const QModelIndex& idx, GraphicsNodeSocket::SocketType t, NodeWrapper* n)
+        : m_Socket(idx, t, &n->m_Node), m_pNode(n) {}
+
+    GraphicsNodeSocket m_Socket;
+
+    NodeWrapper* m_pNode;
+
+    EdgeWrapper* m_EdgeWrapper {Q_NULLPTR};
 };
 
 //TODO split the "data" and "proxy" part of this class and use it to replace
 // the NodeWrapper:: content. This way, getting an on demand proxy will cost
 // "nothing"
-class NodeEdgeFilterProxy final : public QAbstractProxyModel
+class QNodeEdgeFilterProxy final : public QAbstractProxyModel
 {
     Q_OBJECT
 public:
-    explicit NodeEdgeFilterProxy(QNodeEditorSocketModelPrivate* d, NodeWrapper *w, GraphicsNodeSocket::SocketType t);
+    explicit QNodeEdgeFilterProxy(QNodeEditorSocketModelPrivate* d, NodeWrapper *w, GraphicsNodeSocket::SocketType t);
 
     virtual int rowCount(const QModelIndex& parent = {}) const override;
     virtual QModelIndex mapFromSource(const QModelIndex& sourceIndex) const override;
     virtual QModelIndex mapToSource(const QModelIndex& proxyIndex) const override;
     virtual int columnCount(const QModelIndex& parent = {}) const override;
     virtual QModelIndex index(int row, int column, const QModelIndex& parent ={}) const override;
+    virtual QVariant data(const QModelIndex& idx, int role) const override;
     virtual QModelIndex parent(const QModelIndex& idx) const override;
+    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    virtual Qt::ItemFlags flags(const QModelIndex &idx) const override;
+
+//     void updateExtraColumns(
 
 private:
     const GraphicsNodeSocket::SocketType m_Type;
@@ -97,6 +105,9 @@ struct EdgeWrapper final
     GraphicsBezierEdge m_Edge               ;
     SocketWrapper*     m_pSink   {Q_NULLPTR};
     bool               m_IsShown {  false  };
+    int                m_EdgeId  {s_CurId++};
+
+    static int s_CurId;
 };
 
 class QNodeEditorSocketModelPrivate final : public QObject
@@ -150,6 +161,8 @@ public Q_SLOTS:
     void slotConnectionsChanged (const QModelIndex& tl, const QModelIndex& br  );
     void exitDraggingMode();
 };
+
+int EdgeWrapper::s_CurId = 0;
 
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
     QTypeColoriserProxy(rmodel), d_ptr(new QNodeEditorSocketModelPrivate(this))
@@ -337,11 +350,10 @@ SocketWrapper* QNodeEditorSocketModelPrivate::getSocketCommon(const QModelIndex&
 
     auto ret = relIdx != -1 ? ((*nodew).*S)[relIdx] : Q_NULLPTR;
 
-    Q_ASSERT((!ret) || ret->m_Socket.index() == idx);
+//     Q_ASSERT((!ret) || ret->m_Socket.index() == idx);
 
     return ret;
 }
-
 
 SocketWrapper* QNodeEditorSocketModelPrivate::getSourceSocket(const QModelIndex& idx) const
 {
@@ -438,7 +450,7 @@ QAbstractItemModel *QNodeEditorSocketModel::sinkSocketModel(const QModelIndex& n
         return Q_NULLPTR;
 
     if (!n->m_pSinkProxy)
-        n->m_pSinkProxy = new NodeEdgeFilterProxy(
+        n->m_pSinkProxy = new QNodeEdgeFilterProxy(
             d_ptr,
             n,
             GraphicsNodeSocket::SocketType::SINK
@@ -455,7 +467,7 @@ QAbstractItemModel *QNodeEditorSocketModel::sourceSocketModel(const QModelIndex&
         return Q_NULLPTR;
 
     if (!n->m_pSourceProxy)
-        n->m_pSourceProxy = new NodeEdgeFilterProxy(
+        n->m_pSourceProxy = new QNodeEdgeFilterProxy(
             d_ptr,
             n,
             GraphicsNodeSocket::SocketType::SOURCE
@@ -551,7 +563,7 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
             auto s = new SocketWrapper(
                 idx,
                 GraphicsNodeSocket::SocketType::SOURCE,
-                &nodew->m_Node
+                nodew
             );
             nodew->m_lSourcesFromSrc.resize(
                 std::max(i+1,nodew->m_lSourcesFromSrc.size())
@@ -572,7 +584,7 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
             auto s = new SocketWrapper(
                 idx,
                 GraphicsNodeSocket::SocketType::SINK,
-                &nodew->m_Node
+                nodew
             );
             nodew->m_lSinksFromSrc.resize(
                 std::max(i+1,nodew->m_lSinksFromSrc.size())
@@ -738,14 +750,33 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
         if ((e->m_pSource = getSourceSocket(src)))
             e->m_pSource->m_Socket.setEdge(m_EdgeModel.index(i, 0));
 
-        if (oldSrc && oldSrc != e->m_pSource)
-            oldSrc->m_Socket.setEdge({});
+        if (oldSrc != e->m_pSource) {
+            if (oldSrc)
+                oldSrc->m_Socket.setEdge({});
+
+            if (oldSrc && oldSrc->m_EdgeWrapper && oldSrc->m_EdgeWrapper == e) {
+                oldSrc->m_EdgeWrapper = Q_NULLPTR;
+            }
+
+            if (e->m_pSource) {
+                e->m_pSource->m_EdgeWrapper = e;
+            }
+        }
 
         if ((e->m_pSink = getSinkSocket(sink)))
             e->m_pSink->m_Socket.setEdge(m_EdgeModel.index(i, 2));
 
-        if (oldSink && oldSink != e->m_pSink)
-            oldSink->m_Socket.setEdge({});
+        if (oldSink != e->m_pSink) {
+            if (oldSink)
+                oldSink->m_Socket.setEdge({});
+
+            if (oldSink && oldSink->m_EdgeWrapper && oldSink->m_EdgeWrapper == e) {
+                oldSink->m_EdgeWrapper = Q_NULLPTR;
+            }
+
+            if (e->m_pSink)
+                e->m_pSink->m_EdgeWrapper = e;
+        }
 
         // Update the graphic item
         const bool isUsed = e->m_pSource || e->m_pSink;
@@ -766,13 +797,13 @@ QNodeEditorSocketModel* QNodeEditorEdgeModel::socketModel() const
     return d_ptr->q_ptr;
 }
 
-NodeEdgeFilterProxy::NodeEdgeFilterProxy(QNodeEditorSocketModelPrivate* d, NodeWrapper *w, GraphicsNodeSocket::SocketType t) :
+QNodeEdgeFilterProxy::QNodeEdgeFilterProxy(QNodeEditorSocketModelPrivate* d, NodeWrapper *w, GraphicsNodeSocket::SocketType t) :
     QAbstractProxyModel(d), m_Type(t), m_pWrapper(w), d_ptr(d)
 {
     setSourceModel(d->q_ptr);
 }
 
-int NodeEdgeFilterProxy::rowCount(const QModelIndex& parent) const
+int QNodeEdgeFilterProxy::rowCount(const QModelIndex& parent) const
 {
     if (parent.isValid())
         return 0;
@@ -787,7 +818,7 @@ int NodeEdgeFilterProxy::rowCount(const QModelIndex& parent) const
     return 0;
 }
 
-QModelIndex NodeEdgeFilterProxy::mapFromSource(const QModelIndex& srcIdx) const
+QModelIndex QNodeEdgeFilterProxy::mapFromSource(const QModelIndex& srcIdx) const
 {
     static const auto check = [](
         const QVector<int>& l, const QModelIndex& src, const GraphicsNode* n
@@ -810,9 +841,12 @@ QModelIndex NodeEdgeFilterProxy::mapFromSource(const QModelIndex& srcIdx) const
     return {};
 }
 
-QModelIndex NodeEdgeFilterProxy::mapToSource(const QModelIndex& proxyIndex) const
+QModelIndex QNodeEdgeFilterProxy::mapToSource(const QModelIndex& proxyIndex) const
 {
     if ((!proxyIndex.isValid()) || proxyIndex.model() != this)
+        return {};
+
+    if (proxyIndex.column())
         return {};
 
     const auto srcP = m_pWrapper->m_Node.index();
@@ -827,34 +861,124 @@ QModelIndex NodeEdgeFilterProxy::mapToSource(const QModelIndex& proxyIndex) cons
     return {};
 }
 
-int NodeEdgeFilterProxy::columnCount(const QModelIndex& parent) const
+int QNodeEdgeFilterProxy::columnCount(const QModelIndex& parent) const
 {
-    return parent.isValid() ? 0 : 1;
+    return parent.isValid() ? 0 : 4;
 }
 
-QModelIndex NodeEdgeFilterProxy::index(int row, int column, const QModelIndex& parent) const
+QModelIndex QNodeEdgeFilterProxy::index(int row, int column, const QModelIndex& parent) const
 {
-    if (parent.isValid() || row < 0 || column)
+    if (parent.isValid() || row < 0 || column < 0 || column > 3)
         return {};
 
     switch(m_Type) {
         case GraphicsNodeSocket::SocketType::SOURCE:
             if (row < m_pWrapper->m_lSources.size())
-                return createIndex(row, 0, nullptr);
+                return createIndex(row, column, nullptr);
             break;
         case GraphicsNodeSocket::SocketType::SINK:
             if (row < m_pWrapper->m_lSinks.size())
-                return createIndex(row, 0, nullptr);
+                return createIndex(row, column, nullptr);
             break;
     }
 
     return {};
 }
 
-QModelIndex NodeEdgeFilterProxy::parent(const QModelIndex& idx) const
+QVariant QNodeEdgeFilterProxy::data(const QModelIndex& idx, int role) const
+{
+    if ((!idx.isValid()) || idx.model() != this)
+        return {};
+
+    if (!idx.column())
+        return QAbstractProxyModel::data(idx, role);
+
+    SocketWrapper* i = Q_NULLPTR;
+
+    switch (m_Type) {
+        case GraphicsNodeSocket::SocketType::SOURCE:
+            Q_ASSERT(idx.row() < m_pWrapper->m_lSources.size());
+            i = m_pWrapper->m_lSources[idx.row()];
+            break;
+        case GraphicsNodeSocket::SocketType::SINK:
+            Q_ASSERT(idx.row() < m_pWrapper->m_lSinks.size());
+            i = m_pWrapper->m_lSinks[idx.row()];
+            break;
+    }
+
+    // There is nothing to display if the socket isn't connected
+    if ((!i) || (!i->m_EdgeWrapper))
+        return {};
+
+    const auto edgeIdx = i->m_EdgeWrapper->m_Edge.index();
+
+    if (idx.column() == 1) {
+        if (role == Qt::DisplayRole)
+            return i->m_EdgeWrapper->m_EdgeId;
+        else
+            return edgeIdx.data(role);
+    }
+
+    // This leaves columns 2 and 3 to handle
+
+    if (i->m_EdgeWrapper->m_pSink && i->m_EdgeWrapper->m_pSource) {
+        switch (m_Type) {
+            case GraphicsNodeSocket::SocketType::SOURCE:
+                if (idx.column() == 2)
+                    return edgeIdx.model()->index(edgeIdx.row(), 2).data(role);
+                else
+                    i->m_EdgeWrapper->m_pSink->m_pNode->m_Node.index().data(role);
+            case GraphicsNodeSocket::SocketType::SINK:
+                if (idx.column() == 2)
+                    return edgeIdx.model()->index(edgeIdx.row(), 0).data(role);
+                else
+                    i->m_EdgeWrapper->m_pSource->m_pNode->m_Node.index().data(role);
+        }
+    }
+
+    return {};
+}
+
+QModelIndex QNodeEdgeFilterProxy::parent(const QModelIndex& idx) const
 {
     Q_UNUSED(idx);
     return {};
+}
+
+QVariant QNodeEdgeFilterProxy::headerData(int section, Qt::Orientation ori, int role) const
+{
+    // The default one is good enough
+    if (ori == Qt::Vertical || role != Qt::DisplayRole)
+        return {};
+
+    static QVariant sock  {QStringLiteral("Socket name")};
+    static QVariant edge  {QStringLiteral("Edge")};
+    static QVariant other {QStringLiteral("Connected socket")};
+    static QVariant node  {QStringLiteral("Connected node")};
+
+    switch(section) {
+        case 0:
+            return sock;
+        case 1:
+            return edge;
+        case 2:
+            return other;
+        case 3:
+            return node;
+    };
+
+    return {};
+}
+
+Qt::ItemFlags QNodeEdgeFilterProxy::flags(const QModelIndex &idx) const
+{
+    if (!idx.isValid())
+        return Qt::NoItemFlags;
+
+    if (!idx.column())
+        return QAbstractProxyModel::flags(idx);
+
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
 
 #include <qnodeeditorsocketmodel.moc>

@@ -180,6 +180,11 @@ paint(QPainter * painter, const QStyleOptionGraphicsItem * opt, QWidget *w)
     painter->drawPath(path());
 }
 
+QModelIndex GraphicsDirectedEdge::index() const
+{
+    return d_ptr->m_Index;
+}
+
 void GraphicsDirectedEdge::setSink(const QModelIndex& idx)
 {
     const auto i = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 2);

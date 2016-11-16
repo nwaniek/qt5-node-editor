@@ -32,6 +32,8 @@ public:
     void setSink(const QModelIndex& idx);
     void setSource(const QModelIndex& idx);
 
+    QModelIndex index() const;
+
 protected:
     // It cannot be constructed by itself or the user
     explicit GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor=0.5f);

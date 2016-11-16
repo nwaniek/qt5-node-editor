@@ -25,6 +25,8 @@ public:
     enum ConnectionsRoles {
         SOURCE_INDEX      = -1,
         DESTINATION_INDEX = -1,
+        IS_VALID          = -2,
+        IS_USED           = -3,
     };
 
     enum ConnectionsColumns {

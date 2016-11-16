@@ -410,15 +410,23 @@ QVariant ConnectedIndicesModel::data(const QModelIndex& idx, int role) const
 
     Q_ASSERT(conn);
 
-    if (role == QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX) {
-        switch(idx.column()) {
-            case QReactiveProxyModel::ConnectionsColumns::SOURCE:
-                return conn->source;
-            case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
-                return conn->destination;
-        }
+    // custom role for this model
+    switch(role) {
+        case QReactiveProxyModel::ConnectionsRoles::IS_VALID:
+            return conn->isValid();
+        case QReactiveProxyModel::ConnectionsRoles::IS_USED:
+            return conn->isUsed();
+        case QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX:
+            switch(idx.column()) {
+                case QReactiveProxyModel::ConnectionsColumns::SOURCE:
+                    return conn->source;
+                case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
+                    return conn->destination;
+            }
+            break;
     }
 
+    // proxy to the source
     switch(idx.column()) {
         case QReactiveProxyModel::ConnectionsColumns::SOURCE:
             return conn->source.data(role);
