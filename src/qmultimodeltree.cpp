@@ -27,6 +27,7 @@ struct InternalItem
     InternalItem*          m_pParent;
     QVector<InternalItem*> m_lChildren;
     QString                m_Title;
+    QVariant               m_UId;
 };
 
 class QMultiModelTreePrivate : public QObject
@@ -36,6 +37,9 @@ public:
 
     QVector<InternalItem*> m_lRows;
     QHash<const QAbstractItemModel*, InternalItem*> m_hModels;
+
+    bool m_HasIdRole {false};
+    int m_IdRole {Qt::DisplayRole};
 
     QMultiModelTree* q_ptr;
 
@@ -72,9 +76,12 @@ QVariant QMultiModelTree::data(const QModelIndex& idx, int role) const
     if (i->m_Mode == InternalItem::Mode::PROXY)
         return i->m_pModel->data(mapToSource(idx), role);
 
+    if (d_ptr->m_HasIdRole && d_ptr->m_IdRole == role)
+        return i->m_UId;
+
     switch (role) {
         case Qt::DisplayRole:
-            return i->m_Title.isEmpty() ?
+            return (!i->m_Title.isEmpty()) ?
                 i->m_Title : i->m_pModel->objectName();
     };
 
@@ -92,10 +99,15 @@ bool QMultiModelTree::setData(const QModelIndex &index, const QVariant &value, i
         case InternalItem::Mode::PROXY:
             return i->m_pModel->setData(mapToSource(index), value, role);
         case InternalItem::Mode::ROOT:
+            if (d_ptr->m_HasIdRole && d_ptr->m_IdRole == role) {
+                i->m_UId = value;
+                return true;
+            }
             switch(role) {
                 case Qt::DisplayRole:
                 case Qt::EditRole:
                     i->m_Title = value.toString();
+                    return true;
             }
             break;
     };
@@ -219,7 +231,7 @@ void QMultiModelTreePrivate::slotRowsInserted(const QModelIndex& parent, int fir
     slotAddRows(parent, first, last, model);
 }
 
-QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model)
+QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model, const QVariant& id)
 {
     if ((!model) || d_ptr->m_hModels[model]) return {};
 
@@ -229,7 +241,9 @@ QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model)
         InternalItem::Mode::ROOT,
         model,
         Q_NULLPTR,
-        {}
+        {},
+        id.canConvert<QString>() ? id.toString() : model->objectName(),
+        id
     };
     d_ptr->m_lRows << d_ptr->m_hModels[model];
     endInsertRows();
@@ -301,3 +315,13 @@ QMimeData* QMultiModelTree::mimeData(const QModelIndexList &indexes) const
     return QAbstractItemModel::mimeData(indexes);
 }
 
+int QMultiModelTree::topLevelIdentifierRole() const
+{
+    return d_ptr->m_IdRole;
+}
+
+void QMultiModelTree::setTopLevelIdentifierRole(int role)
+{
+    d_ptr->m_HasIdRole = true;
+    d_ptr->m_IdRole = role;
+}

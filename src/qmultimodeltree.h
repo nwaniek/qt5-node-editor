@@ -21,6 +21,10 @@ public:
     explicit QMultiModelTree(QObject* parent = Q_NULLPTR);
     virtual ~QMultiModelTree();
 
+    /// A role used to return the model identifier
+    int topLevelIdentifierRole() const;
+    void setTopLevelIdentifierRole(int role);
+
     virtual QVariant data(const QModelIndex& idx, int role) const override;
     virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
     virtual int rowCount(const QModelIndex& parent = {}) const override;
@@ -36,7 +40,7 @@ public:
                 int row, int column, const QModelIndex &parent) override;
     virtual QMimeData *mimeData(const QModelIndexList &indexes) const override;
 
-    QModelIndex appendModel(QAbstractItemModel* model);
+    QModelIndex appendModel(QAbstractItemModel* model, const QVariant& id = {});
 
 public:
     QMultiModelTreePrivate* d_ptr;
