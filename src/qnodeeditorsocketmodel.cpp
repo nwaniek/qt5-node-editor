@@ -162,7 +162,7 @@ public Q_SLOTS:
     void exitDraggingMode();
 };
 
-int EdgeWrapper::s_CurId = 0;
+int EdgeWrapper::s_CurId = 1;
 
 QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, GraphicsNodeScene* scene ) : 
     QTypeColoriserProxy(rmodel), d_ptr(new QNodeEditorSocketModelPrivate(this))
@@ -737,7 +737,7 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
         const auto sink = m_EdgeModel.index(i, 2).data(CRole::DESTINATION_INDEX).toModelIndex();
 
         // Make sure the edge exists
-        if (m_lEdges.size()-1 <= i && !m_lEdges[i]) {
+        if (m_lEdges.size()-1 < i || !m_lEdges[i]) {
             m_lEdges.resize(std::max(m_lEdges.size(), i+1));
             m_lEdges[i] = new EdgeWrapper(&m_EdgeModel, m_EdgeModel.index(i, 1));
         }
@@ -926,13 +926,15 @@ QVariant QNodeEdgeFilterProxy::data(const QModelIndex& idx, int role) const
             case GraphicsNodeSocket::SocketType::SOURCE:
                 if (idx.column() == 2)
                     return edgeIdx.model()->index(edgeIdx.row(), 2).data(role);
-                else
-                    i->m_EdgeWrapper->m_pSink->m_pNode->m_Node.index().data(role);
+                else {
+                    return i->m_EdgeWrapper->m_pSink->m_pNode->m_Node.index().data(role);
+                }
             case GraphicsNodeSocket::SocketType::SINK:
                 if (idx.column() == 2)
                     return edgeIdx.model()->index(edgeIdx.row(), 0).data(role);
-                else
-                    i->m_EdgeWrapper->m_pSource->m_pNode->m_Node.index().data(role);
+                else {
+                    return i->m_EdgeWrapper->m_pSource->m_pNode->m_Node.index().data(role);
+                }
         }
     }
 
