@@ -40,6 +40,8 @@ public:
     Q_INVOKABLE QAbstractItemModel *sinkModel() const;
     Q_INVOKABLE QAbstractItemModel *sourceModel() const;
 
+    const QModelIndex socketIndex(const QString& name) const;
+
     void setSize(const qreal width, const qreal height);
     void setSize(const QSizeF size);
     void setSize(const QPointF size);

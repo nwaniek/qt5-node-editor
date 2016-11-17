@@ -307,6 +307,18 @@ QAbstractItemModel* GraphicsNode::model() const
     return d_ptr->m_pModel;
 }
 
+const QModelIndex GraphicsNode::socketIndex(const QString& name) const
+{
+    const auto c = model()->rowCount(index());
+    for (int i = 0; i < c; i++) {
+        auto idx = model()->index(i, 0, index());
+        if (idx.data() == name)
+            return idx;
+    }
+
+    return {};
+}
+
 void GraphicsNodePrivate::
 updateGeometry()
 {
