@@ -1,291 +1,198 @@
 /* See LICENSE file for copyright and license details. */
 
 #include "graphicsbezieredge.hpp"
-#include <QPoint>
-#include <utility>
 #include <algorithm>
 #include <QPainter>
 #include <QGraphicsSceneMouseEvent>
-#include <QGraphicsDropShadowEffect>
-#include <iostream>
+#include <QGraphicsPathItem>
 #include <QMetaProperty>
-#include <QDebug>
+
+#include <QtCore/QDebug>
 
 #include "graphicsnode.hpp"
 #include "graphicsnodesocket.hpp"
 
+#include "graphicsnodesocket_p.h"
+#include "graphicsbezieredge_p.h"
+
+#include "qreactiveproxymodel.h"
+
+#include "qnodeeditorsocketmodel.h"
+
+class GraphicsEdgeItem : public QGraphicsPathItem
+{
+public:
+    explicit GraphicsEdgeItem(GraphicsDirectedEdgePrivate* s) : d_ptr(s) {}
+
+    virtual int type() const override;
+
+    virtual void updatePath() = 0;
+
+protected:
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    GraphicsDirectedEdgePrivate* d_ptr;
+};
+
+class GraphicsBezierItem final : public GraphicsEdgeItem
+{
+public:
+    explicit GraphicsBezierItem(GraphicsDirectedEdgePrivate* s) :
+        GraphicsEdgeItem(s) {}
+
+    virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0) override;
+    virtual int type() const override;
+    virtual void updatePath() override;
+};
 
 GraphicsDirectedEdge::
-GraphicsDirectedEdge(QPoint start, QPoint stop, qreal factor)
-: _pen(QColor("#00FF00"))
-, _effect(new QGraphicsDropShadowEffect())
-, _start(start)
-, _stop(stop)
-, _factor(factor)
+GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor)
+: QObject(), d_ptr(new GraphicsDirectedEdgePrivate(this))
 {
-	_pen.setWidth(2);
-	setZValue(-1);
+    Q_ASSERT(index.isValid());
 
-	_effect->setBlurRadius(15.0);
-	_effect->setColor(QColor("#99050505"));
-	setGraphicsEffect(_effect);
+    d_ptr->m_pModel = m;
+    d_ptr->m_Index  = index;
+    d_ptr->_factor  = factor;
+    d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr);
+
+    d_ptr->_pen.setWidth(2);
+    d_ptr->m_pGrpahicsItem->setZValue(-1);
+
+    d_ptr->_effect->setBlurRadius(15.0);
+    d_ptr->_effect->setColor(QColor("#99050505"));
+    d_ptr->m_pGrpahicsItem->setGraphicsEffect(d_ptr->_effect);
 }
 
-
-GraphicsDirectedEdge::
-GraphicsDirectedEdge(QPointF start, QPointF stop, qreal factor)
-: GraphicsDirectedEdge(start.toPoint(), stop.toPoint(), factor) {}
-
-
-GraphicsDirectedEdge::
-GraphicsDirectedEdge(int x0, int y0, int x1, int y1, qreal factor)
-: GraphicsDirectedEdge(QPoint(x0, y0), QPoint(x1, y1), factor) {}
-
-
-GraphicsDirectedEdge::
-GraphicsDirectedEdge(qreal factor)
-: GraphicsDirectedEdge(0, 0, 0, 0, factor) {}
-
-
-GraphicsDirectedEdge::
-GraphicsDirectedEdge(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid, qreal factor)
-: GraphicsDirectedEdge(0, 0, 0, 0, factor)
+void GraphicsDirectedEdge::update()
 {
-	connect(n1, sourceid, n2, sinkid);
+    d_ptr->m_pGrpahicsItem->updatePath();
 }
 
-
-GraphicsDirectedEdge::
-GraphicsDirectedEdge(GraphicsNodeSocket *source, GraphicsNodeSocket *sink, qreal factor)
-: GraphicsDirectedEdge(0, 0, 0, 0, factor)
+int GraphicsBezierItem::
+type() const
 {
-	connect(source, sink);
+    return GraphicsNodeItemTypes::TypeBezierEdge;
+}
+
+QGraphicsItem *GraphicsDirectedEdge::
+graphicsItem() const
+{
+    Q_ASSERT(d_ptr->m_pGrpahicsItem);
+    return d_ptr->m_pGrpahicsItem;
 }
 
 
 GraphicsDirectedEdge::
 ~GraphicsDirectedEdge()
 {
-	delete _effect;
+    delete d_ptr->_effect;
+    delete d_ptr->m_pGrpahicsItem;
+    delete d_ptr;
 }
 
 
-void GraphicsDirectedEdge::
+void GraphicsEdgeItem::
 mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    //FIXME currently dead code, need to be implemented
     QGraphicsPathItem::mousePressEvent(event);
 }
 
-
-void GraphicsDirectedEdge::onSourceDataChange()
+void GraphicsDirectedEdgePrivate::
+setStart(QPointF p)
 {
-	QVariant var;
-	// get Source Data
-
-	QObject* data1 = _source->m_data;
-	const QMetaObject* mo1 = data1->metaObject();
-	QMetaProperty mp1 = mo1->property(_source->m_index);
-	const char *name1 = mp1.name();
-
-	var = data1->property(name1);
-
-	// set sink
-	QObject* data2 = _sink->m_data;
-	const QMetaObject* mo2 = data2->metaObject();
-	QMetaProperty mp2 = mo2->property(_sink->m_index);
-	const char * name2 = mp2.name();
-
-	if(!data2->setProperty(name2,var))
-		qWarning() << "Error Writing QVariant "<< var << "[ " <<name1<<" -> " <<name2<<" ]";
+    _start = p;
+    m_pGrpahicsItem->updatePath();
 }
 
 
-void GraphicsDirectedEdge::
-set_start(int x0, int y0)
+void GraphicsDirectedEdgePrivate::
+setStop(QPointF p)
 {
-	set_start(QPoint(x0, y0));
+    _stop = p;
+    m_pGrpahicsItem->updatePath();
 }
 
-
-void GraphicsDirectedEdge::
-set_stop(int x1, int y1)
+GraphicsBezierEdge::GraphicsBezierEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor)
+    : GraphicsDirectedEdge(m, index, factor)
 {
-	set_stop(QPoint(x1, y1));
+    d_ptr->m_pGrpahicsItem = new GraphicsBezierItem(d_ptr);
 }
 
-
-void GraphicsDirectedEdge::
-set_start(QPointF p)
+void GraphicsBezierItem::
+updatePath()
 {
-	set_start(p.toPoint());
+    Q_ASSERT(d_ptr->m_Index.isValid());
+
+    auto srcI  = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 0)
+        .data(Qt::SizeHintRole);
+    auto sinkI = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 2)
+        .data(Qt::SizeHintRole);
+
+    // compute anchor point offsets
+    const qreal min_dist = 0.f; //FIXME this is dead code? can the code below ever get negative?
+
+    QPointF c1 = srcI.canConvert<QPointF>() ? srcI.toPointF() : d_ptr->_start;
+
+    QPointF c2 = sinkI.canConvert<QPointF>() ? sinkI.toPointF() : d_ptr->_stop;
+
+    const qreal dist = (c1.x() <= c2.x()) ?
+        std::max(min_dist, (c2.x() - c1.x()) * d_ptr->_factor):
+        std::max(min_dist, (c1.x() - c2.x()) * d_ptr->_factor);
+
+    QPainterPath path(c1);
+
+    const auto c3 = c2;
+
+    c1.rx() += dist;
+    c2.rx() -= dist;
+
+    path.cubicTo(c1, c2, c3);
+    setPath(path);
+
+    //FIXME technically, all edges currently are at {0,0}, they should be at c1
+    // This makes many "objects under cursor" call slow
 }
 
-
-void GraphicsDirectedEdge::
-set_stop(QPointF p)
+int GraphicsEdgeItem::
+type() const
 {
-	set_stop(p.toPoint());
+    return GraphicsNodeItemTypes::TypeBezierEdge;
 }
 
-
-void GraphicsDirectedEdge::
-set_start(QPoint p)
+void GraphicsBezierItem::
+paint(QPainter * painter, const QStyleOptionGraphicsItem * opt, QWidget *w)
 {
-	_start = p;
-	this->update_path();
+    Q_UNUSED(opt)
+    Q_UNUSED(w)
+
+    const auto fg = d_ptr->m_Index.data(Qt::ForegroundRole);
+
+    // Set the line color
+    if (fg.canConvert<QBrush>())
+        painter->setPen(QPen(qvariant_cast<QBrush>(fg),d_ptr->_pen.width()));
+    else if (fg.canConvert<QPen>())
+        painter->setPen(qvariant_cast<QPen>(fg));
+    else
+        painter->setPen(d_ptr->_pen);
+
+
+    painter->drawPath(path());
 }
 
-
-void GraphicsDirectedEdge::
-set_stop(QPoint p)
+QModelIndex GraphicsDirectedEdge::index() const
 {
-	_stop = p;
-	update_path();
+    return d_ptr->m_Index;
 }
 
-
-void GraphicsDirectedEdge::
-connect(GraphicsNode *n1, int sourceid, GraphicsNode *n2, int sinkid)
+void GraphicsDirectedEdge::setSink(const QModelIndex& idx)
 {
-	if (_source)
-	        QObject::disconnect(this,SLOT(onSourceDataChange()));
-
-	n1->connect_source(sourceid, this);
-	n2->connect_sink(sinkid, this);
-
-	connect_source(n1->get_source_socket(sourceid));
-	_sink = n2->get_sink_socket(sinkid);
+    const auto i = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 2);
+    d_ptr->m_pModel->setData(i, idx, QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX);
 }
 
-
-void GraphicsDirectedEdge::
-connect(GraphicsNodeSocket *source, GraphicsNodeSocket *sink)
+void GraphicsDirectedEdge::setSource(const QModelIndex& idx)
 {
-	if (_source) {
-		QObject* data = _source->m_data;
-		if (data) QObject::disconnect(data,0,this,0);
-	}
-
-	source->set_edge(this);
-	sink->set_edge(this);
-	_source = source;
-	_sink = sink;
+    const auto i = d_ptr->m_pModel->index(d_ptr->m_Index.row(), 0);
+    d_ptr->m_pModel->setData(i, idx, QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX);
 }
-
-
-void GraphicsDirectedEdge::
-disconnect()
-{
-	if (_source) {
-		_source->set_edge(nullptr);
-		QObject* data = _source->m_data;
-		if (data) QObject::disconnect(data,0,this,0);
-	}
-	if (_sink) _sink->set_edge(nullptr);
-}
-
-
-void GraphicsDirectedEdge::
-disconnect_sink()
-{
-	if (_sink) _sink->set_edge(nullptr);
-}
-
-
-void GraphicsDirectedEdge::
-disconnect_source()
-{
-	if (_source) {
-		_source->set_edge(nullptr);
-		QObject* data = _source->m_data;
-		if (data) QObject::disconnect(data,0,this,0);
-	}
-}
-
-
-void GraphicsDirectedEdge::
-connect_sink(GraphicsNodeSocket *sink)
-{
-	if (_sink) _sink->set_edge(nullptr);
-	_sink = sink;
-	if (_sink) _sink->set_edge(this);
-}
-
-
-void GraphicsDirectedEdge::
-connect_source(GraphicsNodeSocket *source)
-{
-	if (_source){
-		_source->set_edge(nullptr);
-
-		QObject* data = _source->m_data;
-		if (data) QObject::disconnect(data, 0, this, 0);
-	}
-
-	_source = source;
-
-	if (_source){
-		_source->set_edge(this);
-
-		QObject* data = _source->m_data;
-		if (data) {
-			const QMetaObject* mo = data->metaObject();
-			QMetaProperty mp = mo->property(_source->m_index);
-			QMetaMethod notifySignal = mp.notifySignal();
-
-			int functionIndex = metaObject()->indexOfSlot("onSourceDataChange()");
-			QMetaMethod edgeInternalSlot = metaObject()->method(functionIndex);
-
-			QObject::connect(data, notifySignal, this, edgeInternalSlot);
-		}
-	}
-}
-
-
-void GraphicsDirectedEdge::
-sinkDisconnected(GraphicsNode *node, GraphicsNodeSocket *sink)
-{
-}
-
-
-void GraphicsDirectedEdge::
-sourceDisconnected(GraphicsNode *node, GraphicsNodeSocket *source)
-{
-}
-
-
-void GraphicsBezierEdge::
-update_path()
-{
-	QPoint c1, c2;
-	QPainterPath path(_start);
-
-	// compute anchor point offsets
-	const qreal min_dist = 0.f;
-	// const qreal max_dist = 250.f;
-	qreal dist = 0;
-	if (_start.x() <= _stop.x()) {
-		dist = std::max(min_dist, (_stop.x() - _start.x()) * _factor);
-	} else {
-		dist = std::max(min_dist, (_start.x() - _stop.x()) * _factor);
-	}
-
-	// dist = std::min(dist, max_dist);
-	c1.setX(_start.x() + dist);
-	c1.setY(_start.y());
-
-	c2.setX(_stop.x() - dist);
-	c2.setY(_stop.y());
-
-	path.cubicTo(c1, c2, _stop);
-	setPath(path);
-}
-
-
-void GraphicsBezierEdge::
-paint(QPainter * painter, const QStyleOptionGraphicsItem * /*option*/, QWidget * /*widget*/)
-{
-	painter->setPen(_pen);
-	painter->drawPath(path());
-}
-

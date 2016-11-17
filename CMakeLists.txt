@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.8)
-project(qt5-node-editor)
+project(qnodeeditor)
 
 add_definitions(-std=c++11)
 set(CMAKE_BUILD_TYPE DEBUG)
@@ -14,4 +14,4 @@ include_directories(src)
 add_subdirectory(src)
 
 # demo applications
-add_subdirectory(examples/simple-data-forwarding)
+# add_subdirectory(examples/simple-data-forwarding)

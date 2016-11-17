@@ -1,128 +1,71 @@
 /* See LICENSE file for copyright and license details. */
 
-#ifndef __GRAPHICSNODE_HPP__0707C377_95A2_4E0B_B98B_7E4813001982
-#define __GRAPHICSNODE_HPP__0707C377_95A2_4E0B_B98B_7E4813001982
+#ifndef GRAPHICS_NODE_H
+#define GRAPHICS_NODE_H
 
-#include <vector>
+#include <QtCore/QRectF>
+#include <QtCore/QPointF>
+#include <QtCore/QVariant>
+#include <QtCore/QString>
 
-#include <QPen>
-#include <QBrush>
-#include <QRectF>
-#include <QPointF>
-#include <QGraphicsItem>
-#include <QGraphicsObject>
-#include <QVariant>
-#include <QString>
 #include "graphicsnodedefs.hpp"
 
-
 class QWidget;
-class QPushButton;
-class QGraphicsProxyWidget;
 class QGraphicsSceneMouseEvent;
-class QGraphicsDropShadowEffect;
 class QGraphicsTextItem;
 class GraphicsDirectedEdge;
 class GraphicsNodeSocket;
+class QAbstractItemModel;
 
+class QNodeEditorSocketModel;
 
-class GraphicsNode : public QGraphicsItem
+class GraphicsNodePrivate;
+
+class GraphicsNode : public QObject
 {
+    friend class QNodeEditorSocketModel; // To update them
+    friend class QNodeEditorSocketModelPrivate; // For creating GraphicsNodes
+    friend class NodeWrapper; // To delete it
+    Q_OBJECT
+
 public:
-	GraphicsNode(QGraphicsItem *parent = nullptr);
-	virtual ~GraphicsNode();
+    QGraphicsItem *graphicsItem() const;
 
-	virtual QRectF boundingRect() const override;
-	virtual void paint(QPainter *painter,
-			const QStyleOptionGraphicsItem *option,
-			QWidget *widget = 0) override;
+    QSizeF size() const;
 
+    void setTitle(const QString &title);
 
-	const GraphicsNodeSocket* add_sink(const QString &text,QObject *data=0,int id=0);
-	const GraphicsNodeSocket* add_source(const QString &text,QObject *data=0,int id=0);
+    QString title() const;
 
-	GraphicsNodeSocket* get_source_socket(const size_t id);
-	GraphicsNodeSocket* get_sink_socket(const size_t id);
+    Q_INVOKABLE QAbstractItemModel *sinkModel() const;
+    Q_INVOKABLE QAbstractItemModel *sourceModel() const;
 
-	// connecting sources and sinks
-	void connect_source(int i, GraphicsDirectedEdge *edge);
-	void connect_sink(int i, GraphicsDirectedEdge *edge);
+    const QModelIndex socketIndex(const QString& name) const;
 
-	int type() const override {
-		return GraphicsNodeItemTypes::TypeNode;
-	};
+    void setSize(const qreal width, const qreal height);
+    void setSize(const QSizeF size);
+    void setSize(const QPointF size);
 
-	qreal width() const {
-		return _width;
-	}
+    QModelIndex index() const;
+    QAbstractItemModel* model() const;
 
-	qreal height() const {
-		return _height;
-	}
-
-	void setTitle(const QString &title);
-
-	void setSize(const qreal width, const qreal height);
-	void setSize(const QSizeF size);
-	void setSize(const QPointF size);
-
-
-	/**
-	 * set a regular QWidget as central widget
-	 */
-	void setCentralWidget(QWidget *widget);
-
-protected:
-	virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-	virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+    /**
+        * set a regular QWidget as central widget
+        */
+    void setCentralWidget(QWidget *widget);
 
 private:
-	void updateGeometry();
-	void updatePath();
-	void updateSizeHints();
-	void propagateChanges();
+    explicit GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModelIndex& index, QGraphicsItem *parent = nullptr);
+    virtual ~GraphicsNode();
 
-private:
-	// TODO: change pairs of sizes to QPointF, QSizeF, or quadrupels to QRectF
+    void update();
 
-	const qreal _hard_min_width = 150.0;
-	const qreal _hard_min_height = 120.0;
-
-	qreal _min_width = 150.0;
-	qreal _min_height = 120.0;
-
-	const qreal _top_margin = 30.0;
-	const qreal _bottom_margin = 15.0;
-	const qreal _item_padding = 5.0;
-	const qreal _lr_padding = 10.0;
-
-	const qreal _pen_width = 1.0;
-	const qreal _socket_size = 6.0;
-
-	bool _changed;
-
-	qreal _width;
-	qreal _height;
-
-	QPen _pen_default;
-	QPen _pen_selected;
-	QPen _pen_sources;
-	QPen _pen_sinks;
-
-	QBrush _brush_title;
-	QBrush _brush_background;
-	QBrush _brush_sources;
-	QBrush _brush_sinks;
-
-	QGraphicsDropShadowEffect *_effect;
-	QGraphicsTextItem *_title_item;
-	QGraphicsProxyWidget *_central_proxy = nullptr;
-
-	QString _title;
-
-	std::vector<GraphicsNodeSocket*> _sources;
-	std::vector<GraphicsNodeSocket*> _sinks;
+    GraphicsNodePrivate* d_ptr;
+    Q_DECLARE_PRIVATE(GraphicsNode)
 };
 
-#endif /* __GRAPHICSNODE_HPP__0707C377_95A2_4E0B_B98B_7E4813001982 */
+Q_DECLARE_METATYPE(GraphicsNode*)
+
+
+#endif //GRAPHICS_NODE_H
 
