@@ -67,3 +67,18 @@ QReactiveProxyModel* QNodeView::reactiveModel() const
 {
     return &d_ptr->m_Proxy;
 }
+
+QAbstractItemModel *QNodeView::sinkSocketModel(const QModelIndex& node) const
+{
+    return d_ptr->m_pFactory->sinkSocketModel(node);
+}
+
+QAbstractItemModel *QNodeView::sourceSocketModel(const QModelIndex& node) const
+{
+    return d_ptr->m_pFactory->sourceSocketModel(node);
+}
+
+QAbstractItemModel* QNodeView::edgeModel() const
+{
+    return d_ptr->m_pFactory->edgeModel();
+}

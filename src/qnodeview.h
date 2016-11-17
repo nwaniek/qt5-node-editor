@@ -22,9 +22,14 @@ public:
 
     GraphicsNode* getNode(const QModelIndex& idx) const;
 
+    Q_INVOKABLE QAbstractItemModel *sinkSocketModel(const QModelIndex& node) const;
+    Q_INVOKABLE QAbstractItemModel *sourceSocketModel(const QModelIndex& node) const;
+
     GraphicsNodeScene* scene() const; //TODO remove
 
     QReactiveProxyModel* reactiveModel() const; //TODO try to find a better way
+
+    QAbstractItemModel* edgeModel() const;
 
 private:
     QNodeViewPrivate* d_ptr;
