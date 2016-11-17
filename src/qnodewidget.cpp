@@ -3,6 +3,8 @@
 #include "graphicsnode.hpp"
 #include "qmultimodeltree.h"
 
+#include "qreactiveproxymodel.h"
+
 #include <QtCore/QDebug>
 
 class QNodeWidgetPrivate : public QObject
@@ -16,6 +18,8 @@ public:
 QNodeWidget::QNodeWidget(QWidget* parent) : QNodeView(parent),
     d_ptr(new QNodeWidgetPrivate(this))
 {
+    d_ptr->m_Model.setTopLevelIdentifierRole(Qt::UserRole);
+
     setModel(&d_ptr->m_Model);
 }
 
@@ -24,11 +28,13 @@ QNodeWidget::~QNodeWidget()
     delete d_ptr;
 }
 
-GraphicsNode* QNodeWidget::addObject(QObject* o, const QString& title)
+GraphicsNode* QNodeWidget::addObject(QObject* o, const QString& title, QNodeWidget::ObjectFlags f, const QVariant& uid)
 {
+    Q_UNUSED(f)
+
     auto m = new QObjectModel({o}, Qt::Vertical, QObjectModel::Role::PropertyNameRole, this);
 
-    return addModel(m, title);
+    return addModel(m, title, uid);
 }
 
 /**
@@ -54,12 +60,18 @@ GraphicsNode* QNodeWidget::addObject(QObject* o, const QString& title)
  * returned from QAbstractItemModel::mimeData() as a base instead of creating
  * a blank one.
  */
-GraphicsNode* QNodeWidget::addModel(QAbstractItemModel* m, const QString& title)
+GraphicsNode* QNodeWidget::addModel(QAbstractItemModel* m, const QString& title, const QVariant& uid)
 {
     const auto idx = d_ptr->m_Model.appendModel(m);
 
-    Q_ASSERT(idx.isValid());
+    if (!title.isEmpty())
+        d_ptr->m_Model.setData(idx, title, Qt::EditRole);
 
+    d_ptr->m_Model.setData(idx, uid, Qt::UserRole);
+
+    Q_ASSERT(d_ptr->m_Model.data(idx, Qt::UserRole) == uid);
+    Q_ASSERT(reactiveModel()->data(idx, Qt::UserRole) == uid);
+    Q_ASSERT(idx.isValid());
     Q_ASSERT(getNode(idx));
 
     return getNode(idx);
