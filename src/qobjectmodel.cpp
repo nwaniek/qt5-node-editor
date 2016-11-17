@@ -403,7 +403,7 @@ MetaPropertyColumnMapper* QObjectModelPrivate::getMapper(QObject* o)
             continue;
 
         mapper->m_lProperties << new MetaPropertyColumnMapper::Property {
-            (
+            static_cast<unsigned char>(
                 (p.isReadable     () ? CAP::READ   : CAP::NONE) |
                 (p.isWritable     () ? CAP::WRITE  : CAP::NONE) |
                 (p.hasNotifySignal() ? CAP::NOTIFY : CAP::NONE) |
