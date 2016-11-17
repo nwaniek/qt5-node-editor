@@ -61,8 +61,8 @@ public:
 
     QAbstractProxyModel* m_pCurrentProxy {nullptr};
 
-    bool m_HasExtraRole[4] {false, false, false, false};
-    int  m_ExtraRole   [4] {0,     0,     0,     0    };
+    bool m_HasExtraRole[5] {false, false, false, false, false};
+    int  m_ExtraRole   [5] {0,     0,     0,     0,     0    };
 
     // In case dataChanged() contains a single QModelIndex, use this fast path
     // to avoid doing a query on each connections or QModelIndex
@@ -422,6 +422,19 @@ QVariant ConnectedIndicesModel::data(const QModelIndex& idx, int role) const
                     return conn->source;
                 case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
                     return conn->destination;
+            }
+            break;
+        case QReactiveProxyModel::ConnectionsRoles::UID:
+            // Fallback on the Qt::DisplayRole is done on purpose
+            switch(idx.column()) {
+                case QReactiveProxyModel::ConnectionsColumns::SOURCE:
+                    return conn->source.data(d_ptr->m_ExtraRole[
+                        (int) QReactiveProxyModel::ExtraRoles::IdentifierRole
+                    ]);
+                case QReactiveProxyModel::ConnectionsColumns::DESTINATION:
+                    return conn->destination.data(d_ptr->m_ExtraRole[
+                        (int) QReactiveProxyModel::ExtraRoles::IdentifierRole
+                    ]);
             }
             break;
     }

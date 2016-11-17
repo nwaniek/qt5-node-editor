@@ -27,6 +27,7 @@ public:
         DESTINATION_INDEX = -1,
         IS_VALID          = -2,
         IS_USED           = -3,
+        UID               = -4,
     };
 
     enum ConnectionsColumns {
@@ -57,6 +58,7 @@ public:
         DestinationConnectionNotificationRole,
         SourceDisconnectionNotificationRole,
         DestinationDisconnectionNotificationRole,
+        IdentifierRole,
     };
 
     int extraRole(ExtraRoles type) const;
