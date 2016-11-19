@@ -217,7 +217,8 @@ void QMultiModelTreePrivate::slotAddRows(const QModelIndex& parent, int first, i
             src,
             p,
             {},
-            QStringLiteral("N/A")
+            QStringLiteral("N/A"),
+            {}
         };
     }
     q_ptr->endInsertRows();
@@ -309,7 +310,7 @@ QMimeData* QMultiModelTree::mimeData(const QModelIndexList &indexes) const
         }
     }
 
-    if ((!newList.isEmpty()) && srcModel)
+    if (singleModel && (!newList.isEmpty()) && srcModel)
         return srcModel->mimeData(newList);
 
     return QAbstractItemModel::mimeData(indexes);

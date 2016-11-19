@@ -36,7 +36,7 @@ public:
 
 protected:
     // It cannot be constructed by itself or the user
-    explicit GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor=0.5f);
+    explicit GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor=0.5);
 
     GraphicsDirectedEdgePrivate* d_ptr;
     Q_DECLARE_PRIVATE(GraphicsDirectedEdge)
@@ -48,7 +48,7 @@ class GraphicsBezierEdge : public GraphicsDirectedEdge
 public:
 
 protected:
-    explicit GraphicsBezierEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor=0.5f);
+    explicit GraphicsBezierEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal factor=0.5);
 };
 
 #endif /* GRAPHICS_DIRECTED_EDGE_H */

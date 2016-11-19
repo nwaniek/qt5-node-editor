@@ -11,7 +11,7 @@ class GraphicsNode;
 
 //TODO use  a QAbstractItemView as the base class...
 
-class QNodeView : public GraphicsNodeView
+class Q_DECL_EXPORT QNodeView : public GraphicsNodeView
 {
     Q_OBJECT
 public:

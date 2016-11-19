@@ -80,6 +80,8 @@ wheelEvent(QWheelEvent *event) {
 void GraphicsNodeView::
 mousePressEvent(QMouseEvent *event)
 {
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wswitch"
 	switch (event->button()) {
 	case Qt::MiddleButton:
 		middleMouseButtonPress(event);
@@ -90,6 +92,7 @@ mousePressEvent(QMouseEvent *event)
 	default:
 		QGraphicsView::mousePressEvent(event);
 	}
+	#pragma GCC diagnostic pop
 }
 
 
@@ -144,6 +147,8 @@ mouseReleaseEvent(QMouseEvent *event)
 {
 	viewport()->setCursor(Qt::ArrowCursor);
 
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wswitch"
 	switch (event->button()) {
 	case Qt::MiddleButton:
 		middleMouseButtonRelease(event);
@@ -154,6 +159,7 @@ mouseReleaseEvent(QMouseEvent *event)
 	default:
 		QGraphicsView::mouseReleaseEvent(event);
 	}
+	#pragma GCC diagnostic pop
 }
 
 
@@ -236,7 +242,7 @@ leftMouseButtonPress(QMouseEvent *event)
 
 			switch (sock->socketType()) {
 			case GraphicsNodeSocket::SocketType::SINK:
-				if (_drag_event->e = m_pModel->getSinkEdge(sock->edge()))
+				if ((_drag_event->e = m_pModel->getSinkEdge(sock->edge())))
 					_drag_event->mode = EdgeDragEvent::to_sink;
 				else {
 					_drag_event->e = m_pModel->initiateConnectionFromSink(
@@ -247,7 +253,7 @@ leftMouseButtonPress(QMouseEvent *event)
 				_drag_event->e->setSink(sock->index());
 				break;
 			case GraphicsNodeSocket::SocketType::SOURCE:
-				if (_drag_event->e = m_pModel->getSinkEdge(sock->edge()))
+				if ((_drag_event->e = m_pModel->getSinkEdge(sock->edge())))
 					_drag_event->mode = EdgeDragEvent::to_source;
 				else {
 					_drag_event->e = m_pModel->initiateConnectionFromSource(

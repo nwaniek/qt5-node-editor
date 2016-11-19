@@ -130,7 +130,7 @@ updatePath()
         .data(Qt::SizeHintRole);
 
     // compute anchor point offsets
-    const qreal min_dist = 0.f; //FIXME this is dead code? can the code below ever get negative?
+    const qreal min_dist = 0.; //FIXME this is dead code? can the code below ever get negative?
 
     QPointF c1 = srcI.canConvert<QPointF>() ? srcI.toPointF() : d_ptr->_start;
 

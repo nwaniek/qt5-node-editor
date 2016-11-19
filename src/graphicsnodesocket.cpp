@@ -23,8 +23,6 @@
 
 #define BRUSH_COLOR_SINK      QColor("#FF0077FF")
 #define BRUSH_COLOR_SOURCE    QColor("#FFFF7700")
-#define TEXT_ALIGNMENT_SINK   Qt::AlignLeft
-#define TEXT_ALIGNMENT_SOURCE Qt::AlignRight
 
 #include "graphicsbezieredge_p.h"
 

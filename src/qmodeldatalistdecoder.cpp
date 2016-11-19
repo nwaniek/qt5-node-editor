@@ -26,6 +26,10 @@ public:
     QHash<QPair<int, int>, QMap<int, QLousyVariantDecoder> > m_Data;
 };
 
+QDebug operator<<(QDebug debug, const QLousyVariantDecoder &v);
+QDataStream &operator<<(QDataStream &s, const QLousyVariantDecoder &self);
+QDataStream &operator>>(QDataStream &s, QLousyVariantDecoder &self);
+
 QDebug operator<<(QDebug debug, const QLousyVariantDecoder &v)
 {
     return debug << QStringLiteral("<<<")

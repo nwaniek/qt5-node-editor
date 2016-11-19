@@ -21,7 +21,7 @@ class QNodeEditorSocketModel;
 
 class GraphicsNodePrivate;
 
-class GraphicsNode : public QObject
+class Q_DECL_EXPORT GraphicsNode : public QObject
 {
     friend class QNodeEditorSocketModel; // To update them
     friend class QNodeEditorSocketModelPrivate; // For creating GraphicsNodes

@@ -52,7 +52,7 @@ struct NodeWrapper final
     QRectF m_SceneRect;
 };
 
-struct SocketWrapper
+struct SocketWrapper final
 {
     SocketWrapper(const QModelIndex& idx, GraphicsNodeSocket::SocketType t, NodeWrapper* n)
         : m_Socket(idx, t, &n->m_Node), m_pNode(n) {}
@@ -692,8 +692,6 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
             ).toModelIndex();
 
             return d_ptr->q_ptr->mapFromSource(srcIdx).data(Qt::BackgroundRole);
-
-            break;
     }
 
     auto sock = (!idx.column()) ?
@@ -833,9 +831,11 @@ QModelIndex QNodeEdgeFilterProxy::mapFromSource(const QModelIndex& srcIdx) const
         case GraphicsNodeSocket::SocketType::SOURCE:
             if (check(m_pWrapper->m_lSourcesFromSrc, srcIdx, &m_pWrapper->m_Node))
                 return createIndex(m_pWrapper->m_lSourcesFromSrc[srcIdx.row()] - 1, 0, Q_NULLPTR);
+            break;
         case GraphicsNodeSocket::SocketType::SINK:
             if (check(m_pWrapper->m_lSinksFromSrc, srcIdx, &m_pWrapper->m_Node))
                 return createIndex(m_pWrapper->m_lSinksFromSrc[srcIdx.row()] - 1, 0, Q_NULLPTR);
+            break;
     }
 
     return {};

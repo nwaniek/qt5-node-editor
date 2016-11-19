@@ -84,6 +84,12 @@ public:
 // Necessary for some compilers...
 constexpr const qreal GraphicsNodePrivate::_hard_min_width;
 constexpr const qreal GraphicsNodePrivate::_hard_min_height;
+constexpr const qreal GraphicsNodePrivate::_top_margin;
+constexpr const qreal GraphicsNodePrivate::_bottom_margin;
+constexpr const qreal GraphicsNodePrivate::_item_padding;
+constexpr const qreal GraphicsNodePrivate::_lr_padding;
+constexpr const qreal GraphicsNodePrivate::_pen_width;
+constexpr const qreal GraphicsNodePrivate::_socket_size;
 
 
 GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModelIndex& index, QGraphicsItem *parent)
@@ -271,6 +277,8 @@ setSize(const QSizeF size)
 QVariant NodeGraphicsItem::
 itemChange(GraphicsItemChange change, const QVariant &value)
 {
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wswitch"
     switch (change) {
     case QGraphicsItem::ItemSelectedChange:
         setZValue(value.toBool() ? 1 : 0);
@@ -286,7 +294,7 @@ itemChange(GraphicsItemChange change, const QVariant &value)
     default:
         break;
     }
-
+    #pragma GCC diagnostic pop
     return QGraphicsItem::itemChange(change, value);
 }
 

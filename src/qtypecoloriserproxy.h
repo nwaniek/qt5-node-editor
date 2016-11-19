@@ -7,7 +7,7 @@ class QTypeColoriserProxyPrivate;
 /**
  * Set the background and foreground color based on a role QMetaType.
  */
-class QTypeColoriserProxy : public QIdentityProxyModel
+class Q_DECL_EXPORT QTypeColoriserProxy : public QIdentityProxyModel
 {
     Q_OBJECT
 public:
