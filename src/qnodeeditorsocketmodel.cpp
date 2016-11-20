@@ -134,7 +134,6 @@ public:
 
     void insertSockets(const QModelIndex& parent, int first, int last);
     void updateSockets(const QModelIndex& parent, int first, int last);
-    void removeSockets(const QModelIndex& parent, int first, int last);
 
     GraphicsDirectedEdge* initiateConnectionFromSource(
         const QModelIndex&             index,
@@ -159,6 +158,7 @@ public Q_SLOTS:
     void slotRowsInserted       (const QModelIndex& parent, int first, int last);
     void slotConnectionsInserted(const QModelIndex& parent, int first, int last);
     void slotConnectionsChanged (const QModelIndex& tl, const QModelIndex& br  );
+    void slotAboutRemoveItem    (const QModelIndex &parent, int first, int last);
     void exitDraggingMode();
 };
 
@@ -184,11 +184,15 @@ QNodeEditorSocketModel::QNodeEditorSocketModel( QReactiveProxyModel* rmodel, Gra
     connect(this, &QAbstractItemModel::rowsInserted,
         d_ptr, &QNodeEditorSocketModelPrivate::slotRowsInserted);
 
+    connect(this, &QAbstractItemModel::rowsAboutToBeRemoved,
+        d_ptr, &QNodeEditorSocketModelPrivate::slotAboutRemoveItem);
+
     connect(&d_ptr->m_EdgeModel, &QAbstractItemModel::rowsInserted,
         d_ptr, &QNodeEditorSocketModelPrivate::slotConnectionsInserted);
 
     connect(&d_ptr->m_EdgeModel, &QAbstractItemModel::dataChanged,
         d_ptr, &QNodeEditorSocketModelPrivate::slotConnectionsChanged);
+
 
     rmodel->setCurrentProxy(this);
 }
@@ -526,6 +530,9 @@ NodeWrapper* QNodeEditorSocketModelPrivate::getNode(const QModelIndex& idx, bool
     if (i.parent().isValid())
         return Q_NULLPTR;
 
+    Q_ASSERT(i == q_ptr->index(i.row(), i.column()));
+    Q_ASSERT(i.row() < q_ptr->rowCount());
+
     // This should have been taken care of already. If it isn't, either the
     // source model is buggy (it will cause crashes later anyway) or this
     // code is (and in that case, the state is already corrupted, ignoring that
@@ -547,6 +554,9 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
 
     Q_ASSERT(parent.model() == q_ptr);
 
+    Q_ASSERT(nodew->m_lSourcesFromSrc.size() >= first);
+    Q_ASSERT(nodew->m_lSinksFromSrc.size() >= first);
+
     for (int i = first; i <= last; i++) {
         const auto idx = q_ptr->index(i, 0, parent);
 
@@ -565,13 +575,12 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
                 GraphicsNodeSocket::SocketType::SOURCE,
                 nodew
             );
-            nodew->m_lSourcesFromSrc.resize(
-                std::max(i+1,nodew->m_lSourcesFromSrc.size())
-            );
             nodew->m_lSourcesFromSrc.insert(i, nodew->m_lSources.size() + 1);
             nodew->m_lSources << s;
             nodew->m_lSourcesToSrc << i;
         }
+        else
+            nodew->m_lSourcesFromSrc.insert(i, 0);
 
         constexpr static const Qt::ItemFlags sinkFlags(
             Qt::ItemIsDropEnabled |
@@ -586,27 +595,20 @@ void QNodeEditorSocketModelPrivate::insertSockets(const QModelIndex& parent, int
                 GraphicsNodeSocket::SocketType::SINK,
                 nodew
             );
-            nodew->m_lSinksFromSrc.resize(
-                std::max(i+1,nodew->m_lSinksFromSrc.size())
-            );
             nodew->m_lSinksFromSrc.insert(i, nodew->m_lSinks.size() + 1);
             nodew->m_lSinks << s;
             nodew->m_lSinksToSrc << i;
         }
+        else
+            nodew->m_lSinksFromSrc.insert(i, 0);
 
         nodew->m_Node.update();
     }
+
+    Q_ASSERT(nodew->m_lSinksFromSrc.size() == nodew->m_lSourcesFromSrc.size());
 }
 
 void QNodeEditorSocketModelPrivate::updateSockets(const QModelIndex& parent, int first, int last)
-{
-    Q_UNUSED(parent)
-    Q_UNUSED(first)
-    Q_UNUSED(last)
-    //TODO
-}
-
-void QNodeEditorSocketModelPrivate::removeSockets(const QModelIndex& parent, int first, int last)
 {
     Q_UNUSED(parent)
     Q_UNUSED(first)
@@ -664,7 +666,9 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
     if (!idx.isValid())
         return {};
 
-    QModelIndex srcIdx = mapToSource(idx);
+    Q_ASSERT(idx.model() == this);
+
+    QModelIndex srcIdx;
 
     switch(idx.column()) {
         case QReactiveProxyModel::ConnectionsColumns::SOURCE:
@@ -678,21 +682,36 @@ QVariant QNodeEditorEdgeModel::data(const QModelIndex& idx, int role) const
             ).toModelIndex();
             break;
         case QReactiveProxyModel::ConnectionsColumns::CONNECTION:
-            // Use the socket background as line color
-            if (role != Qt::ForegroundRole)
-                break;
 
             srcIdx = mapToSource(index(idx.row(),2)).data(
                 QReactiveProxyModel::ConnectionsRoles::DESTINATION_INDEX
             ).toModelIndex();
 
-            if (!srcIdx.isValid())
+            // Use the socket background as line color
+            if (role != Qt::ForegroundRole)
+                break;
+
+            if (!srcIdx.isValid()) {
                 srcIdx = mapToSource(index(idx.row(),0)).data(
-                QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX
-            ).toModelIndex();
+                    QReactiveProxyModel::ConnectionsRoles::SOURCE_INDEX
+                ).toModelIndex();
+            }
 
             return d_ptr->q_ptr->mapFromSource(srcIdx).data(Qt::BackgroundRole);
     }
+
+    if (srcIdx.model() == d_ptr->q_ptr->sourceModel())
+        srcIdx = d_ptr->q_ptr->mapFromSource(srcIdx);
+
+    // It will crash soon if it is false, better do it now
+    Q_ASSERT(
+        (!srcIdx.isValid()) ||
+        srcIdx.model() == d_ptr->q_ptr ||
+        srcIdx.model() == d_ptr->q_ptr->edgeModel()
+    );
+
+    if (srcIdx.model() == d_ptr->q_ptr && srcIdx.parent().isValid()) //TODO remove
+        Q_ASSERT(srcIdx.parent().data() == d_ptr->q_ptr->index(srcIdx.parent().row(),0).data());
 
     auto sock = (!idx.column()) ?
         d_ptr->getSourceSocket(srcIdx) : d_ptr->getSinkSocket(srcIdx);
@@ -787,6 +806,86 @@ void QNodeEditorSocketModelPrivate::slotConnectionsChanged(const QModelIndex& tl
             m_pScene->removeItem(e->m_Edge.graphicsItem());
 
         e->m_IsShown = isUsed;
+    }
+}
+
+void QNodeEditorSocketModelPrivate::slotAboutRemoveItem(const QModelIndex &parent, int first, int last)
+{
+    if (first < 0 || last < first)
+        return;
+
+    if (!parent.isValid() && m_lWrappers.size() > last) {
+
+        for (int i = first; i <= last; i++) {
+            const auto idx = q_ptr->index(i, 0, parent);
+
+            // remove the sockets
+            slotAboutRemoveItem(idx, 0, q_ptr->rowCount(idx) - 1);
+
+            auto nw = m_lWrappers[i];
+            m_pScene->removeItem(nw->m_Node.graphicsItem());
+
+            m_lWrappers.remove(i - (i-first));
+            delete nw;
+        }
+    }
+    else if (parent.isValid() && !parent.parent().isValid()) {
+        auto nw = m_lWrappers[parent.row()];
+        Q_ASSERT(nw);
+
+        QList<int> srcToDel, sinkToDel;
+
+        for (int i = first; i <= last; i++) {
+            Q_ASSERT(parent == nw->m_Node.index());
+
+            Q_ASSERT(nw->m_lSinksFromSrc.size() == nw->m_lSourcesFromSrc.size());
+            Q_ASSERT(nw->m_lSourcesFromSrc.size() > q_ptr->rowCount(parent));
+
+            int sid = nw->m_lSourcesFromSrc[i] - 1;
+            if (sid >= 0) {
+                auto sw = nw->m_lSources[sid];
+                m_pScene->removeItem(sw->m_Socket.graphicsItem());
+                srcToDel << sid;
+                delete sw;
+            }
+
+            sid = nw->m_lSinksFromSrc[i] - 1;
+
+            if (sid >= 0) {
+                auto sw = nw->m_lSinks[sid];
+                m_pScene->removeItem(sw->m_Socket.graphicsItem());
+                sinkToDel << sid;
+                delete sw;
+            }
+        }
+
+        nw->m_lSinksFromSrc.remove(first, last - first + 1);
+        nw->m_lSourcesFromSrc.remove(first, last - first + 1);
+
+        // remove from the list, this assume the sockets are ordered
+        for (int i = 0; i < srcToDel.size(); i++) {
+            nw->m_lSources.remove(srcToDel[i] - i);
+            nw->m_lSourcesToSrc.remove(srcToDel[i] - i);
+        }
+
+        for (int i = 0; i < sinkToDel.size(); i++) {
+            nw->m_lSinks.remove(sinkToDel[i] - i);
+            nw->m_lSinksToSrc.remove(sinkToDel[i] - i);
+        }
+
+        // reload the "FromSrc" mapping
+        int rc(q_ptr->rowCount(parent) - (last - first) - 1), csrc(0), csink(0);
+        for (int i = 0; i < rc; i++) {
+            const auto idx2 = q_ptr->index(i, 0, parent);
+
+            nw->m_lSourcesFromSrc[i] = (csrc < nw->m_lSources.size()
+                && nw->m_lSources[csrc]->m_Socket.index() == idx2
+                && ++csrc) ? csrc : -1;
+
+            nw->m_lSinksFromSrc[i] = (csink < nw->m_lSinks.size()
+                && nw->m_lSinks[csink]->m_Socket.index() == idx2
+                && ++csink) ? csink : -1;
+        }
     }
 }
 
