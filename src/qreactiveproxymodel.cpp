@@ -82,6 +82,7 @@ public:
 public Q_SLOTS:
     void slotMimeDestroyed();
     void slotDataChanged(const QModelIndex& tl, const QModelIndex& br);
+    void slotRemoveItem(const QModelIndex &parent, int first, int last);
 };
 
 QReactiveProxyModel::QReactiveProxyModel(QObject* parent) : QIdentityProxyModel(parent),
@@ -92,6 +93,8 @@ QReactiveProxyModel::QReactiveProxyModel(QObject* parent) : QIdentityProxyModel(
 
     connect(this, &QAbstractItemModel::dataChanged,
         d_ptr, &QReactiveProxyModelPrivate::slotDataChanged);
+    connect(this, &QAbstractItemModel::rowsAboutToBeRemoved,
+        d_ptr, &QReactiveProxyModelPrivate::slotRemoveItem);
 }
 
 ConnectedIndicesModel::ConnectedIndicesModel(QObject* parent, QReactiveProxyModelPrivate* d)
@@ -280,6 +283,9 @@ bool QReactiveProxyModel::connectIndices(const QModelIndex& srcIdx, const QModel
     //TODO check if there is a partial connection that can be re-used
 
     auto conn = d_ptr->newConnection();
+
+    Q_ASSERT(srcIdx.model() == this);
+    Q_ASSERT(destIdx.model() == this);
 
     conn->source        = srcIdx;
     conn->destination   = destIdx;
@@ -575,4 +581,30 @@ void QReactiveProxyModelPrivate::slotDataChanged(const QModelIndex& tl, const QM
     }
 
     //TODO implement scenario 3
+}
+
+void QReactiveProxyModelPrivate::slotRemoveItem(const QModelIndex &parent, int first, int last)
+{
+    // Use a recursive scan of all children to get all connections and remove
+    // them.
+    for (int i = first; i <= last; i++) {
+        const int cc = q_ptr->columnCount(parent);
+        for (int j=0 ; j < cc; j++) {
+            const auto idx = q_ptr->index(i, j, parent);
+            if (auto conn = m_hDirectMapping[idx.internalPointer()]) {
+                conn->source        = QModelIndex();
+                conn->destination   = QModelIndex();
+                conn->sourceIP      = Q_NULLPTR;
+                conn->destinationIP = Q_NULLPTR;
+
+                Q_EMIT m_pConnectionModel->dataChanged(
+                    m_pConnectionModel->index(conn->index, 0),
+                    m_pConnectionModel->index(conn->index, 2)
+                );
+            }
+
+            if (const int rc = q_ptr->rowCount(idx))
+                slotRemoveItem(idx, 0, rc -1);
+        }
+    }
 }
