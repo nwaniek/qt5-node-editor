@@ -200,6 +200,50 @@ QModelIndex QMultiModelTree::mapToSource(const QModelIndex& proxyIndex) const
     return i->m_pModel->index(proxyIndex.row(), proxyIndex.column());
 }
 
+bool QMultiModelTree::removeRows(int row, int count, const QModelIndex &parent)
+{
+    if (row < 0 || count < 1)
+        return false;
+
+    auto idx = parent;
+
+    while (idx.parent().isValid())
+        idx = idx.parent();
+
+    if (idx.isValid() && !idx.parent().isValid()) {
+        const auto i = static_cast<InternalItem*>(idx.internalPointer());
+        if (i->m_pModel->removeRows(row, count, mapToSource(parent))) {
+            beginRemoveRows(parent, row, row + count - 1);
+            endRemoveRows();
+            return true;
+        }
+        //FIXME update the m_Index
+    }
+    else if (!parent.isValid() && row + count <= d_ptr->m_lRows.size()) {
+
+        beginRemoveRows(parent, row, row + count - 1);
+            for(int i = row; i < row+count; i++) {
+                auto item = d_ptr->m_lRows[i];
+                d_ptr->m_hModels.remove(item->m_pModel);
+
+                delete item;
+            }
+
+            d_ptr->m_lRows.remove(row, count);
+
+            for (int i = row+count-1; i < rowCount(); i++)
+                d_ptr->m_lRows[i]->m_Index = i;
+
+        endRemoveRows();
+
+        //Q_EMIT dataChanged(index(0, 0), index(rowCount()-1, columnCount() -1));
+
+        return true;
+    }
+
+    return false;
+}
+
 void QMultiModelTreePrivate::slotAddRows(const QModelIndex& parent, int first, int last, QAbstractItemModel* src)
 {
     if (parent.isValid()) return;
