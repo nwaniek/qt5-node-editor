@@ -10,6 +10,7 @@
 #include <QGraphicsTextItem>
 #include <QGraphicsDropShadowEffect>
 #include <QtWidgets/QWidget>
+#include <QtGui/QFontMetrics>
 
 #include <algorithm>
 
@@ -29,6 +30,20 @@ const T& qAsConst(const T& v)
     return const_cast<const T&>(v);
 }
 #endif
+
+class CloseButton : public QGraphicsTextItem
+{
+public:
+    explicit CloseButton(NodeGraphicsItem* parent);
+
+    int width() const;
+
+private:
+    GraphicsNodePrivate* d_ptr;
+
+protected:
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+};
 
 class GraphicsNodePrivate final
 {
@@ -72,6 +87,7 @@ public:
     //TODO lazy load, add option to disable, its nice, but sllooowwww
     QGraphicsDropShadowEffect *_effect        {new QGraphicsDropShadowEffect()};
     QGraphicsTextItem         *_title_item    {nullptr};
+    CloseButton               *_close_item    {nullptr};
     QGraphicsProxyWidget      *_central_proxy {nullptr};
 
     // Helpers
@@ -114,15 +130,22 @@ GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModel
     d_ptr->m_pGraphicsItem->setFlag(QGraphicsItem::ItemIsSelectable);
     d_ptr->m_pGraphicsItem->setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
+    // The close button
+    d_ptr->_close_item = new CloseButton(d_ptr->m_pGraphicsItem);
+    d_ptr->_close_item->setPos(d_ptr->m_Size.width() - d_ptr->_close_item->width(), 0);
+
     d_ptr->_title_item->setDefaultTextColor(Qt::white);
     d_ptr->_title_item->setPos(0, 0);
-    d_ptr->_title_item->setTextWidth(d_ptr->m_Size.width() - 2*d_ptr->_lr_padding);
+    d_ptr->_title_item->setTextWidth(
+        d_ptr->m_Size.width()
+        - 2*d_ptr->_lr_padding
+        - d_ptr->_close_item->width()
+    );
 
     d_ptr->_effect->setBlurRadius(13.0);
     d_ptr->_effect->setColor(QColor("#99121212"));
 
     d_ptr->m_pGraphicsItem->setGraphicsEffect(d_ptr->_effect);
-
 }
 
 
@@ -163,6 +186,15 @@ QSizeF GraphicsNode::
 size() const
 {
     return d_ptr->m_Size;
+}
+
+QRectF GraphicsNode::
+rect() const
+{
+    return QRectF(
+        d_ptr->m_pGraphicsItem->pos(),
+        d_ptr->m_Size
+    );
 }
 
 QGraphicsItem *GraphicsNode::
@@ -310,6 +342,11 @@ QModelIndex GraphicsNode::index() const
     return d_ptr->m_Index;
 }
 
+void GraphicsNode::setIndex(const QModelIndex& idx)
+{
+    d_ptr->m_Index = idx;
+}
+
 QAbstractItemModel* GraphicsNode::model() const
 {
     return d_ptr->m_pModel;
@@ -340,8 +377,11 @@ updateGeometry()
         std::max(m_MinSize.height(), m_Size.height() )
     };
 
+    // close button
+    _close_item->setPos(m_Size.width() - _close_item->width(), 0);
+
     // title
-    _title_item->setTextWidth(m_Size.width());
+    _title_item->setTextWidth(m_Size.width() - _close_item->width());
 
     qreal yposSink = _top_margin;
     qreal yposSrc  = m_Size.height() - _bottom_margin;
@@ -464,4 +504,27 @@ updateSizeHints() {
         std::max(min_width, _hard_min_width  ),
         std::max(min_height, _hard_min_height)
     };
+}
+
+CloseButton::CloseButton(NodeGraphicsItem* parent) : QGraphicsTextItem(parent),
+    d_ptr(parent->d_ptr)
+{
+    setDefaultTextColor(Qt::white);
+    setHtml(QStringLiteral("<b>❌</b>"));
+    setTextWidth(width());
+}
+
+int CloseButton::width() const
+{
+    static int closeWidth = 0;
+    if (!closeWidth)
+        closeWidth = QFontMetrics(font()).height();
+
+    return closeWidth;
+}
+
+void CloseButton::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    d_ptr->m_pModel->removeRow(d_ptr->m_Index.row(), d_ptr->m_Index.parent());
+    event->accept();
 }
