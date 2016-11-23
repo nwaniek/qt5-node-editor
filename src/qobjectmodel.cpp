@@ -164,12 +164,15 @@ QVariant QObjectModel::data(const QModelIndex& idx, int role) const
 
 bool QObjectModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    if (!index.isValid()) return false;
+    Q_UNUSED(role)
+    if (!index.isValid())
+        return false;
 
     const auto item = static_cast<InternalItem*>(index.internalPointer());
 
     if (!value.canConvert(item->m_pProp->metaType))
         return false;
+
 
     item->m_pObject->setProperty(item->m_pProp->name, value);
     return true;
@@ -223,12 +226,16 @@ Qt::ItemFlags QObjectModel::flags(const QModelIndex &idx) const
 
 QModelIndex QObjectModel::parent(const QModelIndex& idx) const
 {
+    Q_UNUSED(idx)
     // This model doesn't support trees yet
     return {};
 }
 
 QVariant QObjectModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+    Q_UNUSED(section)
+    Q_UNUSED(orientation)
+    Q_UNUSED(role)
     return {};
 }
 
@@ -245,7 +252,7 @@ void QObjectModel::setHeterogeneous(bool value)
     d_ptr->regen();
 }
 
-Qt::Orientation QObjectModel::oridentation() const
+Qt::Orientation QObjectModel::orientation() const
 {
     return d_ptr->m_IsVertical ? Qt::Vertical : Qt::Horizontal;
 }
@@ -273,7 +280,7 @@ bool QObjectModel::isReadOnly() const
 
 void QObjectModel::setReadOnly(bool value)
 {
-    const bool changed = value != d_ptr->m_IsReadOnly;
+    //const bool changed = value != d_ptr->m_IsReadOnly;
     d_ptr->m_IsReadOnly = value;
 
     // Emit dataChanged so the ::flags() method is called by the view
@@ -324,7 +331,7 @@ void QObjectModel::addObject(QObject* obj)
         // could be done using a custom qt_static_metacall, but again, it is a
         // little pointless to implement.
         if (p->sigIdx >= 0)
-            auto r = new PropertyChangeReceiver(this, ip, obj, p->sigIdx);
+            new PropertyChangeReceiver(this, ip, obj, p->sigIdx);
     }
     endInsertRows();
 }

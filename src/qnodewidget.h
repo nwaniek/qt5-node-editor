@@ -9,7 +9,7 @@ class QNodeWidgetPrivate;
 class QAbstractItemModel;
 class GraphicsNode;
 
-class QNodeWidget : public QNodeView
+class Q_DECL_EXPORT QNodeWidget : public QNodeView
 {
     Q_OBJECT
 public:
@@ -43,5 +43,5 @@ public:
 
 private:
     QNodeWidgetPrivate* d_ptr;
-    Q_DECLARE_PRIVATE(QNodeWidget);
+    Q_DECLARE_PRIVATE(QNodeWidget)
 };

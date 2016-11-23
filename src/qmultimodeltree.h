@@ -39,6 +39,7 @@ public:
     virtual bool dropMimeData(const QMimeData *data, Qt::DropAction action,
                 int row, int column, const QModelIndex &parent) override;
     virtual QMimeData *mimeData(const QModelIndexList &indexes) const override;
+    virtual bool removeRows(int row, int count, const QModelIndex &parent = {}) override;
 
     QModelIndex appendModel(QAbstractItemModel* model, const QVariant& id = {});
 

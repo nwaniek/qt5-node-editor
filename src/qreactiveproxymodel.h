@@ -18,7 +18,7 @@ class QReactiveProxyModelPrivate;
  * 
  * All connections has to be from the same model. This could be fixed later.
  */
-class QReactiveProxyModel : public QIdentityProxyModel
+class Q_DECL_EXPORT QReactiveProxyModel : public QIdentityProxyModel
 {
     Q_OBJECT
 public:
