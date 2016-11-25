@@ -348,6 +348,16 @@ void QObjectModel::addObjects(const QList<QObject*>& objs)
         addObject(o);
 }
 
+QObject* QObjectModel::getObject(const QModelIndex& idx) const
+{
+    if ((!idx.isValid()) || idx.model() != this)
+        return Q_NULLPTR;
+
+    const auto item = static_cast<InternalItem*>(idx.internalPointer());
+
+    return item->m_pObject;
+}
+
 int QObjectModel::objectCount() const
 {
     if (d_ptr->m_IsVertical)

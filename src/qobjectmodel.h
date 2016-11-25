@@ -90,6 +90,8 @@ public:
 
     int objectCount() const;
 
+    Q_INVOKABLE QObject* getObject(const QModelIndex& idx) const;
+
     Qt::Orientation orientation() const;
     void setOrientation(Qt::Orientation o);
 
