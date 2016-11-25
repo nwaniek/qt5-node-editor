@@ -13,6 +13,11 @@ public:
     explicit QNodeWidgetPrivate(QObject* p) : QObject(p) {}
 
     QMultiModelTree m_Model{this};
+
+    QNodeWidget* q_ptr;
+
+public Q_SLOTS:
+    void slotRemoveRows(const QModelIndex& parent, int first, int last);
 };
 
 QNodeWidget::QNodeWidget(QWidget* parent) : QNodeView(parent),
@@ -21,6 +26,9 @@ QNodeWidget::QNodeWidget(QWidget* parent) : QNodeView(parent),
     d_ptr->m_Model.setTopLevelIdentifierRole(Qt::UserRole);
 
     setModel(&d_ptr->m_Model);
+
+    connect(reactiveModel(), &QAbstractItemModel::rowsAboutToBeRemoved,
+        d_ptr, &QNodeWidgetPrivate::slotRemoveRows);
 }
 
 QNodeWidget::~QNodeWidget()
@@ -31,6 +39,7 @@ QNodeWidget::~QNodeWidget()
 GraphicsNode* QNodeWidget::addObject(QObject* o, const QString& title, QNodeWidget::ObjectFlags f, const QVariant& uid)
 {
     Q_UNUSED(f)
+    d_ptr->q_ptr = this;
 
     auto m = new QObjectModel({o}, Qt::Vertical, QObjectModel::Role::PropertyNameRole, this);
 
@@ -75,4 +84,27 @@ GraphicsNode* QNodeWidget::addModel(QAbstractItemModel* m, const QString& title,
     Q_ASSERT(getNode(idx));
 
     return getNode(idx);
+}
+
+void QNodeWidgetPrivate::slotRemoveRows(const QModelIndex& parent, int first, int last)
+{
+    if (parent.isValid())
+        return;
+
+    for (int i = first; i <= last; i++) {
+        auto idx = m_Model.index(i, 0);
+
+        Q_ASSERT(idx.isValid());
+
+        auto m = m_Model.getModel(idx);
+
+        if (auto qom = qobject_cast<QObjectModel*>(m)) {
+            if (qom->objectCount() == 1)
+                Q_EMIT q_ptr->objectRemoved(qom->getObject(qom->index(0,0)));
+            else
+                Q_EMIT q_ptr->modelRemoved(m);
+        }
+        else
+            Q_EMIT q_ptr->modelRemoved(m);
+    }
 }
