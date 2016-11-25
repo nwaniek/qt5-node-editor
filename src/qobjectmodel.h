@@ -45,6 +45,8 @@ public:
         TypeNameRole,
     };
 
+    Q_PROPERTY(int objectCount READ objectCount)
+
     explicit QObjectModel(QObject* parent = Q_NULLPTR);
     QObjectModel(const QList<QObject*> objs, Qt::Orientation = Qt::Horizontal, int displayRole = Qt::DisplayRole, QObject* parent = Q_NULLPTR);
     virtual ~QObjectModel();
@@ -75,6 +77,9 @@ public:
     /// By default, the value is used, but it can be configured to use something else
     int displayRole() const;
     void setDisplayRole(int role);
+
+    /// Get the number of objects displayed by the model
+    int objectCount() const;
 
     /// Display as a list or a table
     Qt::Orientation orientation() const;

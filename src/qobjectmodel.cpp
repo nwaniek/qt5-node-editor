@@ -348,6 +348,14 @@ void QObjectModel::addObjects(const QList<QObject*>& objs)
         addObject(o);
 }
 
+int QObjectModel::objectCount() const
+{
+    if (d_ptr->m_IsVertical)
+        return d_ptr->m_lRows.isEmpty() ? 0 : 1;
+
+    return d_ptr->m_lRows.size();
+}
+
 void QObjectModelPrivate::clear()
 {
     QList<InternalItem*> items;
