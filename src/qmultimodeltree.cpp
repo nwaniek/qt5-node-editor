@@ -67,6 +67,24 @@ QMultiModelTree::~QMultiModelTree()
     delete d_ptr;
 }
 
+QAbstractItemModel* QMultiModelTree::getModel(const QModelIndex& _idx) const
+{
+    auto idx = _idx;
+
+    if (idx.parent().isValid())
+        idx = idx.parent();
+
+    if ((!idx.isValid()) || idx.model() != this || idx.parent().isValid())
+        return Q_NULLPTR;
+
+    const auto i = static_cast<InternalItem*>(idx.internalPointer());
+
+    Q_ASSERT(!i->m_pParent);
+    Q_ASSERT(i->m_pModel);
+
+    return i->m_pModel;
+}
+
 QVariant QMultiModelTree::data(const QModelIndex& idx, int role) const
 {
     if (!idx.isValid())
