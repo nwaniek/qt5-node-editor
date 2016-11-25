@@ -36,6 +36,10 @@ QNodeWidget::~QNodeWidget()
     delete d_ptr;
 }
 
+/**
+ * Also note that you can set the object parent to the QNodeWidget to have it
+ * deleted automatically when its row is removed from the model.
+ */
 GraphicsNode* QNodeWidget::addObject(QObject* o, const QString& title, QNodeWidget::ObjectFlags f, const QVariant& uid)
 {
     Q_UNUSED(f)
@@ -68,6 +72,9 @@ GraphicsNode* QNodeWidget::addObject(QObject* o, const QString& title, QNodeWidg
  * MIME type. For models that re-implement it, make sure to use the QMimeData*
  * returned from QAbstractItemModel::mimeData() as a base instead of creating
  * a blank one.
+ *
+ * Also note that you can set the model parent to the QNodeWidget to have it
+ * deleted automatically when it is removed from the model.
  */
 GraphicsNode* QNodeWidget::addModel(QAbstractItemModel* m, const QString& title, const QVariant& uid)
 {
@@ -99,12 +106,20 @@ void QNodeWidgetPrivate::slotRemoveRows(const QModelIndex& parent, int first, in
         auto m = m_Model.getModel(idx);
 
         if (auto qom = qobject_cast<QObjectModel*>(m)) {
-            if (qom->objectCount() == 1)
-                Q_EMIT q_ptr->objectRemoved(qom->getObject(qom->index(0,0)));
+            if (qom->objectCount() == 1) {
+                auto obj = qom->getObject(qom->index(0,0));
+                Q_EMIT q_ptr->objectRemoved(obj);
+
+                if (obj && obj->parent() == q_ptr)
+                    obj->deleteLater();
+            }
             else
                 Q_EMIT q_ptr->modelRemoved(m);
         }
         else
             Q_EMIT q_ptr->modelRemoved(m);
+
+        if (m->parent() == q_ptr)
+            m->deleteLater();
     }
 }
