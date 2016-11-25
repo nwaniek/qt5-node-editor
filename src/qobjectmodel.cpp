@@ -239,7 +239,7 @@ QVariant QObjectModel::headerData(int section, Qt::Orientation orientation, int 
     return {};
 }
 
-bool QObjectModel::heterogeneous() const
+bool QObjectModel::isHeterogeneous() const
 {
     return d_ptr->m_IsHeterogeneous; //TODO
 }
