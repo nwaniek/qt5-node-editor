@@ -41,6 +41,10 @@ public:
         const QVariant&     uid   = {}
     );
 
+Q_SIGNALS:
+    void objectRemoved(QObject* o);
+    void modelRemoved(QAbstractItemModel* m);
+
 private:
     QNodeWidgetPrivate* d_ptr;
     Q_DECLARE_PRIVATE(QNodeWidget)

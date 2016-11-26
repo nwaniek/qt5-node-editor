@@ -239,7 +239,7 @@ QVariant QObjectModel::headerData(int section, Qt::Orientation orientation, int 
     return {};
 }
 
-bool QObjectModel::heterogeneous() const
+bool QObjectModel::isHeterogeneous() const
 {
     return d_ptr->m_IsHeterogeneous; //TODO
 }
@@ -346,6 +346,24 @@ void QObjectModel::addObjects(const QList<QObject*>& objs)
 {
     for (auto o : qAsConst(objs))
         addObject(o);
+}
+
+QObject* QObjectModel::getObject(const QModelIndex& idx) const
+{
+    if ((!idx.isValid()) || idx.model() != this)
+        return Q_NULLPTR;
+
+    const auto item = static_cast<InternalItem*>(idx.internalPointer());
+
+    return item->m_pObject;
+}
+
+int QObjectModel::objectCount() const
+{
+    if (d_ptr->m_IsVertical)
+        return d_ptr->m_lRows.isEmpty() ? 0 : 1;
+
+    return d_ptr->m_lRows.size();
 }
 
 void QObjectModelPrivate::clear()
