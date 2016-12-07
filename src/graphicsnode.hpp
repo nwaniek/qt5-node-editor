@@ -47,6 +47,9 @@ public:
     void setSize(const QSizeF size);
     void setSize(const QPointF size);
 
+    void setRect(const qreal x, const qreal y, const qreal width, const qreal height);
+    void setRect(const QRectF size);
+
     QModelIndex index() const;
     QAbstractItemModel* model() const;
 

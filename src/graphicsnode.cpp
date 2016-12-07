@@ -155,6 +155,7 @@ setTitle(const QString &title)
     if (auto m = const_cast<QAbstractItemModel*>(d_ptr->m_Index.model()))
         m->setData(d_ptr->m_Index, title, Qt::DisplayRole);
 
+    d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->_title_item->setPlainText(d_ptr->m_Index.data().toString());
 }
 
@@ -207,6 +208,7 @@ GraphicsNode::
 ~GraphicsNode()
 {
     if (d_ptr->_central_proxy) delete d_ptr->_central_proxy;
+
     delete d_ptr->_title_item;
     delete d_ptr->_effect;
     delete d_ptr;
@@ -300,11 +302,25 @@ void GraphicsNode::
 setSize(const QSizeF size)
 {
     d_ptr->m_Size = size;
+
     d_ptr->_changed = true;
     d_ptr->m_pGraphicsItem->prepareGeometryChange();
     d_ptr->updateGeometry();
 }
 
+void GraphicsNode::
+setRect(const qreal x, const qreal y, const qreal width, const qreal height)
+{
+    graphicsItem()->setPos(x, y);
+    setSize(width, height);
+}
+
+void GraphicsNode::
+setRect(const QRectF size)
+{
+    graphicsItem()->setPos(size.topLeft());
+    setSize(size.size());
+}
 
 QVariant NodeGraphicsItem::
 itemChange(GraphicsItemChange change, const QVariant &value)
@@ -319,7 +335,7 @@ itemChange(GraphicsItemChange change, const QVariant &value)
     case QGraphicsItem::ItemPositionHasChanged: {
         auto m = const_cast<QAbstractItemModel*>(d_ptr->m_Index.model());
 
-        m->setData(d_ptr->m_Index, QRectF(pos(), d_ptr->m_Size), Qt::SizeHintRole);
+        m->setData(d_ptr->m_Index, q_ptr->rect(), Qt::SizeHintRole);
     }
         break;
 
@@ -437,6 +453,11 @@ setCentralWidget (QWidget *widget)
 {
     if (d_ptr->_central_proxy)
         delete d_ptr->_central_proxy;
+
+    if (!widget) {
+        d_ptr->m_pGraphicsItem->prepareGeometryChange();
+        d_ptr->updateGeometry();
+    }
 
     d_ptr->_central_proxy = new QGraphicsProxyWidget(d_ptr->m_pGraphicsItem);
     d_ptr->_central_proxy->setWidget(widget);
