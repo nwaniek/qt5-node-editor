@@ -412,7 +412,6 @@ updateGeometry()
             const auto size = s->size();
 
             s->graphicsItem()->setPos(0, yposSink + size.height()/2.0);
-            s->d_ptr->update();
             yposSink += size.height() + _item_padding;
 
             s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
@@ -426,7 +425,6 @@ updateGeometry()
 
             yposSrc -= size.height();
             s->graphicsItem()->setPos(m_Size.width(), yposSrc + size.height()/2.0);
-            s->d_ptr->update();
             yposSrc -= _item_padding;
 
             s->graphicsItem()->setOpacity(s->index().flags() & Qt::ItemIsEnabled ?
