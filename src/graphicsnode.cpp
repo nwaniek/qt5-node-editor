@@ -207,10 +207,20 @@ graphicsItem() const
 GraphicsNode::
 ~GraphicsNode()
 {
-    if (d_ptr->_central_proxy) delete d_ptr->_central_proxy;
+    Q_ASSERT(!d_ptr->m_pGraphicsItem->scene());
+    // The widget proxy doesn't own the widget unless specified
+    if (d_ptr->_central_proxy) {
+        delete d_ptr->_central_proxy;
+        d_ptr->_central_proxy = Q_NULLPTR;
+
+        // Even when removed from the scene, the prepareGeometryChange is
+        // required to avoid a crash, don't ask me why
+        setSize(0,0);
+    }
 
     delete d_ptr->_title_item;
     delete d_ptr->_effect;
+    delete d_ptr->m_pGraphicsItem;
     delete d_ptr;
 }
 
