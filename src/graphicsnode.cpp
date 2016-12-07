@@ -301,7 +301,10 @@ setSize(const QPointF size)
 void GraphicsNode::
 setSize(const QSizeF size)
 {
-    d_ptr->m_Size = size;
+    d_ptr->m_Size = {
+        std::max(d_ptr->m_MinSize.width() , size.width ()),
+        std::max(d_ptr->m_MinSize.height(), size.height())
+    };
 
     d_ptr->_changed = true;
     d_ptr->m_pGraphicsItem->prepareGeometryChange();
@@ -387,11 +390,6 @@ updateGeometry()
 
     // compute if we have reached the minimum size
     updateSizeHints();
-
-    m_Size = {
-        std::max(m_MinSize.width() , m_Size.width()  ),
-        std::max(m_MinSize.height(), m_Size.height() )
-    };
 
     // close button
     _close_item->setPos(m_Size.width() - _close_item->width(), 0);
@@ -523,6 +521,16 @@ updateSizeHints() {
         std::max(min_width, _hard_min_width  ),
         std::max(min_height, _hard_min_height)
     };
+
+    // prevent the scene from being out of sync
+    if (m_Size.width() < min_width || m_Size.height() < min_height) {
+        m_pGraphicsItem->prepareGeometryChange();
+
+        m_Size = {
+            std::max(min_width , m_Size.width ()),
+            std::max(min_height, m_Size.height())
+        };
+    }
 }
 
 CloseButton::CloseButton(NodeGraphicsItem* parent) : QGraphicsTextItem(parent),
