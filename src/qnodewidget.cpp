@@ -9,6 +9,7 @@
 
 class QNodeWidgetPrivate : public QObject
 {
+    Q_OBJECT
 public:
     explicit QNodeWidgetPrivate(QObject* p) : QObject(p) {}
 
@@ -18,6 +19,7 @@ public:
 
 public Q_SLOTS:
     void slotRemoveRows(const QModelIndex& parent, int first, int last);
+    void slotModelRenamed(const QModelIndex& index, const QString& newName, const QString& oldName);
 };
 
 QNodeWidget::QNodeWidget(QWidget* parent) : QNodeView(parent),
@@ -29,6 +31,9 @@ QNodeWidget::QNodeWidget(QWidget* parent) : QNodeView(parent),
 
     connect(reactiveModel(), &QAbstractItemModel::rowsAboutToBeRemoved,
         d_ptr, &QNodeWidgetPrivate::slotRemoveRows);
+
+    connect(&d_ptr->m_Model, SIGNAL(modelRenamed(QModelIndex,QString,QString)),
+        d_ptr, SLOT(slotModelRenamed(QModelIndex,QString,QString)));
 }
 
 QNodeWidget::~QNodeWidget()
@@ -123,3 +128,31 @@ void QNodeWidgetPrivate::slotRemoveRows(const QModelIndex& parent, int first, in
             m->deleteLater();
     }
 }
+
+void QNodeWidgetPrivate::slotModelRenamed(const QModelIndex& index, const QString& newName, const QString& oldName)
+{
+    if ((!index.isValid()) || (index.parent().isValid()))
+        return;
+
+    if (auto node = q_ptr->getNode(index))
+        Q_EMIT q_ptr->nodeRenamed(node, newName, oldName);
+
+    const auto uid = index.data(m_Model.topLevelIdentifierRole()).toString();
+    if (!uid.isEmpty())
+        Q_EMIT q_ptr->nodeRenamed(uid, newName, oldName);
+
+    auto model = m_Model.getModel(index);
+
+    if (auto qom = qobject_cast<QObjectModel*>(model)) {
+        if (qom->objectCount() == 1) {
+            auto obj = qom->getObject(qom->index(0,0));
+            Q_EMIT q_ptr->objectRenamed(obj, newName, oldName);
+        }
+        else
+            Q_EMIT q_ptr->modelRenamed(model, newName, oldName);
+    }
+    else
+        Q_EMIT q_ptr->modelRenamed(model, newName, oldName);
+}
+
+#include <qnodewidget.moc>

@@ -120,13 +120,22 @@ bool QMultiModelTree::setData(const QModelIndex &index, const QVariant &value, i
         case InternalItem::Mode::ROOT:
             if (d_ptr->m_HasIdRole && d_ptr->m_IdRole == role) {
                 i->m_UId = value;
+                Q_EMIT dataChanged(index, index);
                 return true;
             }
             switch(role) {
                 case Qt::DisplayRole:
-                case Qt::EditRole:
-                    i->m_Title = value.toString();
+                case Qt::EditRole: {
+                    const auto oldT = i->m_Title;
+                    const auto newT = value.toString();
+                    i->m_Title = newT;
+                    Q_EMIT dataChanged(index, index);
+                    if (newT != oldT) {
+                        Q_EMIT modelRenamed(i->m_pModel, newT, oldT);
+                        Q_EMIT modelRenamed(index, newT, oldT);
+                    }
                     return true;
+                }
             }
             break;
     };
