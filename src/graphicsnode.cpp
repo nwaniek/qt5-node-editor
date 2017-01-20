@@ -4,6 +4,7 @@
 #include <QtCore/QDebug>
 #include <QPen>
 #include <QPainter>
+#include <QTextCursor>
 #include <QPainterPath>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsSceneMouseEvent>
@@ -44,6 +45,8 @@ private:
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 };
+
+class NodeTitle;
 
 class GraphicsNodePrivate final
 {
@@ -86,9 +89,9 @@ public:
 
     //TODO lazy load, add option to disable, its nice, but sllooowwww
     QGraphicsDropShadowEffect *_effect        {new QGraphicsDropShadowEffect()};
-    QGraphicsTextItem         *_title_item    {nullptr};
-    CloseButton               *_close_item    {nullptr};
-    QGraphicsProxyWidget      *_central_proxy {nullptr};
+    NodeTitle            *_title_item    {nullptr};
+    CloseButton          *_close_item    {nullptr};
+    QGraphicsProxyWidget *_central_proxy {nullptr};
 
     // Helpers
     void updateGeometry();
@@ -107,6 +110,64 @@ constexpr const qreal GraphicsNodePrivate::_lr_padding;
 constexpr const qreal GraphicsNodePrivate::_pen_width;
 constexpr const qreal GraphicsNodePrivate::_socket_size;
 
+class NodeTitle : public QGraphicsTextItem
+{
+public:
+    explicit NodeTitle(GraphicsNodePrivate* parent) : QGraphicsTextItem(parent->m_pGraphicsItem),
+    d_ptr(parent) {}
+
+private:
+    GraphicsNodePrivate* d_ptr;
+
+protected:
+    virtual void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
+    virtual void focusOutEvent(QFocusEvent* event) override;
+    virtual void keyPressEvent(QKeyEvent *event) override;
+};
+
+
+void NodeTitle::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
+{
+    Q_UNUSED(event);
+    setTextInteractionFlags(
+        Qt::TextEditorInteraction
+    );
+
+    auto cur = textCursor();
+    cur.select(QTextCursor::Document);
+    setTextCursor(cur);
+    setFocus();
+}
+
+void NodeTitle::focusOutEvent(QFocusEvent* event)
+{
+    auto cur = textCursor();
+    cur.clearSelection();
+    setTextCursor(cur);
+
+    setTextInteractionFlags(
+        Qt::NoTextInteraction
+    );
+
+    if (event)
+        event->accept();
+}
+
+void NodeTitle::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        focusOutEvent(nullptr);
+        d_ptr->q_ptr->setTitle(toPlainText());
+        event->accept();
+    }
+    else if (event->key() == Qt::Key_Escape) {
+        focusOutEvent(nullptr);
+        setPlainText(d_ptr->m_Index.data().toString());
+        event->accept();
+    }
+
+    QGraphicsTextItem::keyPressEvent(event);
+}
 
 GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModelIndex& index, QGraphicsItem *parent)
 : QObject(nullptr), d_ptr(new GraphicsNodePrivate(this))
@@ -118,7 +179,7 @@ GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModel
     d_ptr->m_pGraphicsItem->d_ptr = d_ptr;
     d_ptr->m_pGraphicsItem->q_ptr = this;
 
-    d_ptr->_title_item = new QGraphicsTextItem(d_ptr->m_pGraphicsItem);
+    d_ptr->_title_item = new NodeTitle(d_ptr);
 
     for (auto p : {
       &d_ptr->_pen_default, &d_ptr->_pen_selected,
@@ -540,6 +601,9 @@ updateSizeHints() {
             std::max(min_width , m_Size.width ()),
             std::max(min_height, m_Size.height())
         };
+
+        // Will cause the socket and edges to be updated
+        //FIXME Q_EMIT m_pModel->dataChanged(m_Index, m_Index);
     }
 }
 
