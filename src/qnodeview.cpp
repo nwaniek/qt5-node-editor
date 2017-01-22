@@ -29,7 +29,6 @@ QNodeView::QNodeView(QWidget* parent) : GraphicsNodeView(parent),
 
     m_pModel = d_ptr->m_pFactory; //HACK to remove
 
-    d_ptr->m_Scene.setSceneRect(-9999, -9999, 9999, 9999);
     setScene(&d_ptr->m_Scene);
 }
 
