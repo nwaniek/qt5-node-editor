@@ -38,6 +38,13 @@ public:
 
     QString title() const;
 
+    QBrush background() const;
+    QPen foreground() const;
+
+    void setBackground(const QBrush& brush);
+    void setForeground(const QPen& pen);
+    void setForeground(const QColor& pen);
+
     Q_INVOKABLE QAbstractItemModel *sinkModel() const;
     Q_INVOKABLE QAbstractItemModel *sourceModel() const;
 
