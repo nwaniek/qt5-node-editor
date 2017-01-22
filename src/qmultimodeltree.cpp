@@ -27,7 +27,7 @@ struct InternalItem
     InternalItem*          m_pParent;
     QVector<InternalItem*> m_lChildren;
     QString                m_Title;
-    QVariant               m_UId;
+    QVariant               m_UId, m_Bg, m_Fg, m_Deco;
 };
 
 class QMultiModelTreePrivate : public QObject
@@ -99,6 +99,12 @@ QVariant QMultiModelTree::data(const QModelIndex& idx, int role) const
         return i->m_UId;
 
     switch (role) {
+        case Qt::BackgroundRole:
+            return i->m_Bg;
+        case Qt::ForegroundRole:
+            return i->m_Fg;
+        case Qt::DecorationRole:
+            return i->m_Deco;
         case Qt::DisplayRole:
             return (!i->m_Title.isEmpty()) ?
                 i->m_Title : i->m_pModel->objectName();
@@ -124,6 +130,18 @@ bool QMultiModelTree::setData(const QModelIndex &index, const QVariant &value, i
                 return true;
             }
             switch(role) {
+                case Qt::BackgroundRole:
+                    i->m_Bg = value;
+                    Q_EMIT dataChanged(index, index);
+                    return true;
+                case Qt::ForegroundRole:
+                    i->m_Fg = value;
+                    Q_EMIT dataChanged(index, index);
+                    return true;
+                case Qt::DecorationRole:
+                    i->m_Deco = value;
+                    Q_EMIT dataChanged(index, index);
+                    return true;
                 case Qt::DisplayRole:
                 case Qt::EditRole: {
                     const auto oldT = i->m_Title;
@@ -136,6 +154,7 @@ bool QMultiModelTree::setData(const QModelIndex &index, const QVariant &value, i
                     }
                     return true;
                 }
+                break;
             }
             break;
     };
@@ -287,7 +306,7 @@ void QMultiModelTreePrivate::slotAddRows(const QModelIndex& parent, int first, i
             p,
             {},
             QStringLiteral("N/A"),
-            {}
+            {}, {}, {}, {}
         };
     }
     q_ptr->endInsertRows();
@@ -327,7 +346,7 @@ QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model, const QVaria
         Q_NULLPTR,
         {},
         id.canConvert<QString>() ? id.toString() : model->objectName(),
-        id
+        id, {}, {}, {}
     };
     d_ptr->m_lRows << d_ptr->m_hModels[model];
     endInsertRows();
