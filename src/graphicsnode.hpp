@@ -42,8 +42,12 @@ public:
     QPen foreground() const;
 
     void setBackground(const QBrush& brush);
+    void setBackground(const QString& brush);
     void setForeground(const QPen& pen);
     void setForeground(const QColor& pen);
+    void setForeground(const QString& pen);
+
+    void setDecoration(const QVariant& deco);
 
     Q_INVOKABLE QAbstractItemModel *sinkModel() const;
     Q_INVOKABLE QAbstractItemModel *sourceModel() const;

@@ -7,11 +7,13 @@
 #include <QTextCursor>
 #include <QPainterPath>
 #include <QGraphicsProxyWidget>
+#include <QGraphicsPixmapItem>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsTextItem>
 #include <QGraphicsDropShadowEffect>
 #include <QtWidgets/QWidget>
 #include <QtGui/QFontMetrics>
+#include <QtGui/QIcon>
 
 #include <algorithm>
 
@@ -92,6 +94,7 @@ public:
     QGraphicsDropShadowEffect *_effect        {new QGraphicsDropShadowEffect()};
 #endif
     NodeTitle            *_title_item    {nullptr};
+    QGraphicsPixmapItem  *_deco_item     {nullptr};
     CloseButton          *_close_item    {nullptr};
     QGraphicsProxyWidget *_central_proxy {nullptr};
 
@@ -181,6 +184,9 @@ GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModel
     d_ptr->m_pGraphicsItem->d_ptr = d_ptr;
     d_ptr->m_pGraphicsItem->q_ptr = this;
 
+    d_ptr->_deco_item = new QGraphicsPixmapItem(d_ptr->m_pGraphicsItem);
+    d_ptr->_deco_item->setPos(2, 4);
+
     d_ptr->_title_item = new NodeTitle(d_ptr);
 
     for (auto p : {
@@ -199,11 +205,12 @@ GraphicsNode::GraphicsNode(QNodeEditorSocketModel* model, const QPersistentModel
 
     d_ptr->_title_item->setDefaultTextColor(Qt::white);
 
-    d_ptr->_title_item->setPos(0, 0);
+    d_ptr->_title_item->setPos(20, 0);
     d_ptr->_title_item->setTextWidth(
         d_ptr->m_Size.width()
         - 2*d_ptr->_lr_padding
         - d_ptr->_close_item->width()
+        - 20 //icon
     );
 
 #if 0
@@ -226,10 +233,38 @@ setTitle(const QString &title)
 }
 
 void GraphicsNode::
+setDecoration(const QVariant& deco)
+{
+    if (!deco.isValid())
+        return;
+
+    if (deco.canConvert<QIcon>()) {
+        const auto px = qvariant_cast<QIcon>(deco).pixmap(16,16);
+        d_ptr->_deco_item->setPixmap(px);
+    }
+    else if (deco.canConvert<QPixmap>()) {
+        d_ptr->_deco_item->setPixmap(qvariant_cast<QPixmap>(deco));
+    }
+}
+
+void GraphicsNode::
+setBackground(const QString& brush)
+{
+    if (auto m = const_cast<QAbstractItemModel*>(d_ptr->m_Index.model()))
+        m->setData(d_ptr->m_Index, QColor(brush), Qt::BackgroundRole);
+}
+
+void GraphicsNode::
 setBackground(const QBrush& brush)
 {
     if (auto m = const_cast<QAbstractItemModel*>(d_ptr->m_Index.model()))
         m->setData(d_ptr->m_Index, brush, Qt::BackgroundRole);
+}
+
+void GraphicsNode::
+setForeground(const QString& pen)
+{
+    setForeground(QColor(pen));
 }
 
 void GraphicsNode::
@@ -346,6 +381,7 @@ GraphicsNode::
     }
 
     delete d_ptr->_title_item;
+    delete d_ptr->_deco_item;
 #if 0
     delete d_ptr->_effect;
 #endif
