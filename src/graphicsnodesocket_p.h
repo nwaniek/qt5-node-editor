@@ -25,14 +25,11 @@ public:
     */
     bool isInSocketCircle(const QPointF &p) const; //TODO move to the private class
 
-    void update();
-
     // Attributes
     GraphicsNodeSocket::SocketType _socket_type;
     QPen _pen_circle {PEN_COLOR_CIRCLE};
     const QPen _pen_text {PEN_COLOR_TEXT};
     QBrush _brush_circle;
-    GraphicsNode *_node;
 
     QPersistentModelIndex m_PersistentIndex;
     QPersistentModelIndex m_EdgeIndex;

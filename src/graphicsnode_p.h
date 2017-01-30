@@ -6,6 +6,7 @@
 class NodeGraphicsItem : public QGraphicsItem
 {
     friend class GraphicsNode; // to access the protected methods
+    friend class GraphicsNodePrivate; // to call prepareUpdate
 public:
     NodeGraphicsItem(QGraphicsItem* parent) : QGraphicsItem(parent) {}
 

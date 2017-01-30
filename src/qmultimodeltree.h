@@ -45,6 +45,10 @@ public:
 
     QModelIndex appendModel(QAbstractItemModel* model, const QVariant& id = {});
 
+Q_SIGNALS:
+    void modelRenamed(QAbstractItemModel* model, const QString& newName, const QString& oldName);
+    void modelRenamed(const QModelIndex& idx, const QString& newName, const QString& oldName);
+
 public:
     QMultiModelTreePrivate* d_ptr;
     Q_DECLARE_PRIVATE(QMultiModelTree)

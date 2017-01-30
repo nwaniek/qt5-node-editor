@@ -14,24 +14,17 @@ GraphicsNodeScene::GraphicsNodeScene(QObject *parent)
 , _color_background(QColor("#393939"))
 , _color_light(QColor("#2F2F2F"))
 , _color_dark(QColor("#292929"))
-, _color_null(QColor("#212121"))
 , _pen_light(QPen(_color_light))
 , _pen_dark(QPen(_color_dark))
-, _pen_null(QPen(_color_null))
 , _brush_background(_color_background)
 {
 	// initialize default pen settings
-	for (auto p : {&_pen_light, &_pen_dark, &_pen_null}) {
+	for (auto p : {&_pen_light, &_pen_dark}) {
 		p->setWidth(0);
 	}
 
 	// initialize the background
 	setBackgroundBrush(_brush_background);
-
-	// add some text to where zero is
-	auto nulltext = this->addText("(0,0)", QFont("Ubuntu Mono"));
-	nulltext->setPos(0, 0);
-	nulltext->setDefaultTextColor(_color_null);
 }
 
 
@@ -72,19 +65,11 @@ drawBackground(QPainter *painter, const QRectF &rect)
 			lines_dark.push_back(QLine(left, y, right, y));
 	}
 
-	// nullspace lines
-	std::vector<QLine> lines_null;
-	lines_null.push_back(QLine(0, top, 0, bottom));
-	lines_null.push_back(QLine(left, 0, right, 0));
-
 	// draw calls
 	painter->setPen(_pen_light);
 	painter->drawLines(lines_light.data(), lines_light.size());
 
 	painter->setPen(_pen_dark);
 	painter->drawLines(lines_dark.data(), lines_dark.size());
-
-	painter->setPen(_pen_null);
-	painter->drawLines(lines_null.data(), lines_null.size());
 }
 

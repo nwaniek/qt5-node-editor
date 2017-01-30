@@ -823,9 +823,11 @@ void QNodeEditorSocketModelPrivate::slotAboutRemoveItem(const QModelIndex &paren
             slotAboutRemoveItem(idx, 0, q_ptr->rowCount(idx) - 1);
 
             auto nw = m_lWrappers[i];
+            nw->m_Node.setCentralWidget(Q_NULLPTR);
             m_pScene->removeItem(nw->m_Node.graphicsItem());
 
             m_lWrappers.remove(i - (i-first));
+
             delete nw;
         }
     }

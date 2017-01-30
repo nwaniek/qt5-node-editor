@@ -147,9 +147,19 @@ drawAlignedText(QPainter *painter)
 
     const QRectF rect(corner, QSizeF(s, s));
 
-    const auto fg = m_PersistentIndex.data(Qt::ForegroundRole);
+    auto fg = m_PersistentIndex.data(Qt::ForegroundRole);
 
-    painter->setPen(fg.canConvert<QPen>() ? qvariant_cast<QPen>(fg) : _pen_text);
+    // Same color as the node
+    if (!fg.isValid())
+        fg = m_PersistentIndex.parent().data(Qt::ForegroundRole);
+
+    if (fg.canConvert<QPen>())
+        painter->setPen(qvariant_cast<QPen>(fg));
+    if (fg.canConvert<QColor>())
+        painter->setPen(qvariant_cast<QColor>(fg));
+    else
+        painter->setPen(_pen_text);
+
     painter->drawText(rect, flags, m_PersistentIndex.data().toString(), 0);
 }
 
@@ -256,12 +266,6 @@ setText(const QString& t)
 {
     if (auto m = const_cast<QAbstractItemModel*>(d_ptr->m_PersistentIndex.model()))
         m->setData(d_ptr->m_PersistentIndex, t, Qt::DisplayRole);
-}
-
-void GraphicsNodeSocketPrivate::update()
-{
-    if (auto m = const_cast<QAbstractItemModel*>(m_PersistentIndex.model()))
-        Q_EMIT m->dataChanged(m_PersistentIndex, m_PersistentIndex);
 }
 
 QModelIndex GraphicsNodeSocket::
