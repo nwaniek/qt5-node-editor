@@ -41,6 +41,17 @@ public:
         const QVariant&     uid   = {}
     );
 
+Q_SIGNALS:
+    // Removing
+    void objectRemoved(QObject* o);
+    void modelRemoved(QAbstractItemModel* m);
+
+    // Renaming
+    void objectRenamed(QObject* o, const QString& nameName, const QString& oldName);
+    void modelRenamed(QAbstractItemModel* m, const QString& nameName, const QString& oldName);
+    void nodeRenamed(GraphicsNode* n, const QString& nameName, const QString& oldName);
+    void nodeRenamed(const QString& uid, const QString& nameName, const QString& oldName);
+
 private:
     QNodeWidgetPrivate* d_ptr;
     Q_DECLARE_PRIVATE(QNodeWidget)

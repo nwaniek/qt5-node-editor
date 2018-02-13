@@ -15,8 +15,25 @@ class QReactiveProxyModelPrivate;
  *
  * This is used to implement reactive programming components such as
  * spreadsheets, pipe and filter or node based editing.
- * 
+ *
  * All connections has to be from the same model. This could be fixed later.
+ *
+ * To avoid poluting stderr with QVariant warnings, this macro can be called
+ * from the .cpp to "mute" warnings instead of `Q_DECLARE_METATYPE`.
+ *
+ *    #ifndef Q_DECLARE_STREAM_METATYPE
+ *    #define Q_DECLARE_STREAM_METATYPE(T) \
+ *        QDataStream &operator<<(QDataStream &s, const T);\
+ *        QDataStream &operator<<(QDataStream &s, const T) { return s; }\
+ *        QDataStream &operator>>(QDataStream &s, const T);\
+ *        QDataStream &operator>>(QDataStream &s, const T) { return s; }\
+ *        static int ___ = ([]()->int{\
+ *            qRegisterMetaType<T>(#T);\
+ *            qRegisterMetaTypeStreamOperators<T>(#T);\
+ *            return 0;\
+ *        })();
+ *    #endif
+ *
  */
 class Q_DECL_EXPORT QReactiveProxyModel : public QIdentityProxyModel
 {

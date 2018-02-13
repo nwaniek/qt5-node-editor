@@ -45,6 +45,26 @@ public:
         TypeNameRole,
     };
 
+    /// Get the number of objects displayed by the model
+    Q_PROPERTY(int objectCount READ objectCount)
+
+    /** In heterogeneous mode, this model take all the properties and mix
+     * them. When this is disabled (default), only the common properties are
+     * added to the model (to preserve the table columns consistency)
+     **/
+    Q_PROPERTY(bool heterogeneous READ isHeterogeneous WRITE setHeterogeneous)
+
+    /// By default, the value is used, but it can be configured to use something else
+    Q_PROPERTY(int displayRole READ displayRole WRITE setDisplayRole)
+
+    /// Display as a list or a table
+    Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation)
+
+    /**
+     * By default, this models enable "setData" when the property is writable.
+     */
+    Q_PROPERTY(bool readOnly READ isReadOnly WRITE setReadOnly)
+
     explicit QObjectModel(QObject* parent = Q_NULLPTR);
     QObjectModel(const QList<QObject*> objs, Qt::Orientation = Qt::Horizontal, int displayRole = Qt::DisplayRole, QObject* parent = Q_NULLPTR);
     virtual ~QObjectModel();
@@ -59,35 +79,33 @@ public:
     virtual QModelIndex parent(const QModelIndex& idx) const override;
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-    /** In heterogeneous mode, this model take all the properties and mix
-     * them. When this is disabled (default), only the common properties are
-     * added to the model (to preserve the table columns consistency)
-     **/
-    bool heterogeneous() const;
+    bool isHeterogeneous() const;
     void setHeterogeneous(bool value); //TODO
 
-    /**
-     * By default, this models enable "setData" when the property is writable.
-     */
     bool isReadOnly() const; //TODO
     void setReadOnly(bool value);
 
-    /// By default, the value is used, but it can be configured to use something else
     int displayRole() const;
     void setDisplayRole(int role);
 
-    /// Display as a list or a table
+    int objectCount() const;
+
+    Q_INVOKABLE QObject* getObject(const QModelIndex& idx) const;
+
     Qt::Orientation orientation() const;
     void setOrientation(Qt::Orientation o);
 
     /**
      * Add objects to be displayed in the model.
      */
-    void addObject(QObject* obj);
-    void addObjects(const QVector<QObject*>& objs);
-    void addObjects(const QList<QObject*>& objs);
+    Q_INVOKABLE void addObject(QObject* obj);
+    Q_INVOKABLE void addObjects(const QVector<QObject*>& objs);
+    Q_INVOKABLE void addObjects(const QList<QObject*>& objs);
 
 private:
     QObjectModelPrivate* d_ptr;
     Q_DECLARE_PRIVATE(QObjectModel)
 };
+
+Q_FLAGS(QObjectModel::Capabilities)
+Q_ENUMS(QObjectModel::Role)

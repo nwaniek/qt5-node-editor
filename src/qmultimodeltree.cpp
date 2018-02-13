@@ -27,7 +27,7 @@ struct InternalItem
     InternalItem*          m_pParent;
     QVector<InternalItem*> m_lChildren;
     QString                m_Title;
-    QVariant               m_UId;
+    QVariant               m_UId, m_Bg, m_Fg, m_Deco;
 };
 
 class QMultiModelTreePrivate : public QObject
@@ -45,6 +45,7 @@ public:
 
 public Q_SLOTS:
     void slotRowsInserted(const QModelIndex& parent, int first, int last);
+    void slotDataChanged(const QModelIndex& tl, const QModelIndex& br);
     void slotAddRows(const QModelIndex& parent, int first, int last, QAbstractItemModel* src);
 };
 
@@ -66,6 +67,24 @@ QMultiModelTree::~QMultiModelTree()
     delete d_ptr;
 }
 
+QAbstractItemModel* QMultiModelTree::getModel(const QModelIndex& _idx) const
+{
+    auto idx = _idx;
+
+    if (idx.parent().isValid())
+        idx = idx.parent();
+
+    if ((!idx.isValid()) || idx.model() != this || idx.parent().isValid())
+        return Q_NULLPTR;
+
+    const auto i = static_cast<InternalItem*>(idx.internalPointer());
+
+    Q_ASSERT(!i->m_pParent);
+    Q_ASSERT(i->m_pModel);
+
+    return i->m_pModel;
+}
+
 QVariant QMultiModelTree::data(const QModelIndex& idx, int role) const
 {
     if (!idx.isValid())
@@ -80,6 +99,12 @@ QVariant QMultiModelTree::data(const QModelIndex& idx, int role) const
         return i->m_UId;
 
     switch (role) {
+        case Qt::BackgroundRole:
+            return i->m_Bg;
+        case Qt::ForegroundRole:
+            return i->m_Fg;
+        case Qt::DecorationRole:
+            return i->m_Deco;
         case Qt::DisplayRole:
             return (!i->m_Title.isEmpty()) ?
                 i->m_Title : i->m_pModel->objectName();
@@ -101,13 +126,35 @@ bool QMultiModelTree::setData(const QModelIndex &index, const QVariant &value, i
         case InternalItem::Mode::ROOT:
             if (d_ptr->m_HasIdRole && d_ptr->m_IdRole == role) {
                 i->m_UId = value;
+                Q_EMIT dataChanged(index, index);
                 return true;
             }
             switch(role) {
-                case Qt::DisplayRole:
-                case Qt::EditRole:
-                    i->m_Title = value.toString();
+                case Qt::BackgroundRole:
+                    i->m_Bg = value;
+                    Q_EMIT dataChanged(index, index);
                     return true;
+                case Qt::ForegroundRole:
+                    i->m_Fg = value;
+                    Q_EMIT dataChanged(index, index);
+                    return true;
+                case Qt::DecorationRole:
+                    i->m_Deco = value;
+                    Q_EMIT dataChanged(index, index);
+                    return true;
+                case Qt::DisplayRole:
+                case Qt::EditRole: {
+                    const auto oldT = i->m_Title;
+                    const auto newT = value.toString();
+                    i->m_Title = newT;
+                    Q_EMIT dataChanged(index, index);
+                    if (newT != oldT) {
+                        Q_EMIT modelRenamed(i->m_pModel, newT, oldT);
+                        Q_EMIT modelRenamed(index, newT, oldT);
+                    }
+                    return true;
+                }
+                break;
             }
             break;
     };
@@ -178,7 +225,6 @@ QModelIndex QMultiModelTree::mapFromSource(const QModelIndex& sourceIndex) const
     if ((!sourceIndex.isValid()) || sourceIndex.parent().isValid() || sourceIndex.column())
         return {};
 
-
     const auto i = d_ptr->m_hModels[sourceIndex.model()];
 
     if ((!i) || sourceIndex.row() >= i->m_lChildren.size())
@@ -236,8 +282,6 @@ bool QMultiModelTree::removeRows(int row, int count, const QModelIndex &parent)
 
         endRemoveRows();
 
-        //Q_EMIT dataChanged(index(0, 0), index(rowCount()-1, columnCount() -1));
-
         return true;
     }
 
@@ -262,7 +306,7 @@ void QMultiModelTreePrivate::slotAddRows(const QModelIndex& parent, int first, i
             p,
             {},
             QStringLiteral("N/A"),
-            {}
+            {}, {}, {}, {}
         };
     }
     q_ptr->endInsertRows();
@@ -274,6 +318,20 @@ void QMultiModelTreePrivate::slotRowsInserted(const QModelIndex& parent, int fir
     Q_ASSERT(model);
 
     slotAddRows(parent, first, last, model);
+}
+
+void QMultiModelTreePrivate::slotDataChanged(const QModelIndex& tl, const QModelIndex& br)
+{
+    if (tl == br && !tl.parent().isValid()) {
+        const auto i = q_ptr->mapFromSource(tl);
+
+        Q_ASSERT((!tl.isValid()) || i.isValid());
+
+        Q_EMIT q_ptr->dataChanged(i, i);
+    }
+    else {
+        Q_EMIT q_ptr->dataChanged(q_ptr->mapFromSource(tl), q_ptr->mapFromSource(br));
+    }
 }
 
 QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model, const QVariant& id)
@@ -288,7 +346,7 @@ QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model, const QVaria
         Q_NULLPTR,
         {},
         id.canConvert<QString>() ? id.toString() : model->objectName(),
-        id
+        id, {}, {}, {}
     };
     d_ptr->m_lRows << d_ptr->m_hModels[model];
     endInsertRows();
@@ -298,6 +356,8 @@ QModelIndex QMultiModelTree::appendModel(QAbstractItemModel* model, const QVaria
     //TODO connect to the model row moved/removed/reset
     connect(model, &QAbstractItemModel::rowsInserted,
         d_ptr, &QMultiModelTreePrivate::slotRowsInserted);
+    connect(model, &QAbstractItemModel::dataChanged,
+        d_ptr, &QMultiModelTreePrivate::slotDataChanged);
 
     return index(rowCount()-1, 0);
 }

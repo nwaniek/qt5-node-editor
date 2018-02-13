@@ -58,9 +58,11 @@ GraphicsDirectedEdge(QNodeEditorEdgeModel* m, const QModelIndex& index, qreal fa
     d_ptr->_pen.setWidth(2);
     d_ptr->m_pGrpahicsItem->setZValue(-1);
 
+#if 0
     d_ptr->_effect->setBlurRadius(15.0);
     d_ptr->_effect->setColor(QColor("#99050505"));
     d_ptr->m_pGrpahicsItem->setGraphicsEffect(d_ptr->_effect);
+#endif
 }
 
 void GraphicsDirectedEdge::update()
@@ -85,7 +87,9 @@ graphicsItem() const
 GraphicsDirectedEdge::
 ~GraphicsDirectedEdge()
 {
+#if 0
     delete d_ptr->_effect;
+#endif
     delete d_ptr->m_pGrpahicsItem;
     delete d_ptr;
 }

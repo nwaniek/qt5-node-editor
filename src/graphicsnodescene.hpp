@@ -21,11 +21,9 @@ private:
 	QColor _color_background;
 	QColor _color_light;
 	QColor _color_dark;
-	QColor _color_null;
 
 	QPen _pen_light;
 	QPen _pen_dark;
-	QPen _pen_null;
 
 	QBrush _brush_background;
 };

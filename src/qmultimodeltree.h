@@ -25,6 +25,8 @@ public:
     int topLevelIdentifierRole() const;
     void setTopLevelIdentifierRole(int role);
 
+    Q_INVOKABLE QAbstractItemModel* getModel(const QModelIndex& idx) const;
+
     virtual QVariant data(const QModelIndex& idx, int role) const override;
     virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
     virtual int rowCount(const QModelIndex& parent = {}) const override;
@@ -42,6 +44,10 @@ public:
     virtual bool removeRows(int row, int count, const QModelIndex &parent = {}) override;
 
     QModelIndex appendModel(QAbstractItemModel* model, const QVariant& id = {});
+
+Q_SIGNALS:
+    void modelRenamed(QAbstractItemModel* model, const QString& newName, const QString& oldName);
+    void modelRenamed(const QModelIndex& idx, const QString& newName, const QString& oldName);
 
 public:
     QMultiModelTreePrivate* d_ptr;

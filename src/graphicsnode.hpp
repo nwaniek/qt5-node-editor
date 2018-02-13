@@ -38,6 +38,17 @@ public:
 
     QString title() const;
 
+    QBrush background() const;
+    QPen foreground() const;
+
+    void setBackground(const QBrush& brush);
+    void setBackground(const QString& brush);
+    void setForeground(const QPen& pen);
+    void setForeground(const QColor& pen);
+    void setForeground(const QString& pen);
+
+    void setDecoration(const QVariant& deco);
+
     Q_INVOKABLE QAbstractItemModel *sinkModel() const;
     Q_INVOKABLE QAbstractItemModel *sourceModel() const;
 
@@ -46,6 +57,9 @@ public:
     void setSize(const qreal width, const qreal height);
     void setSize(const QSizeF size);
     void setSize(const QPointF size);
+
+    void setRect(const qreal x, const qreal y, const qreal width, const qreal height);
+    void setRect(const QRectF size);
 
     QModelIndex index() const;
     QAbstractItemModel* model() const;

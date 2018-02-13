@@ -22,10 +22,18 @@ QVariant QTypeColoriserProxy::data(const QModelIndex& idx, int role) const
         return {};
 
     switch(role) {
-        case Qt::BackgroundRole:
-            return d_ptr->m_lBg[idx.data(d_ptr->m_Role).userType()];
-        case Qt::ForegroundRole:
-            return d_ptr->m_lFg[idx.data(d_ptr->m_Role).userType()];
+        case Qt::BackgroundRole: {
+            const auto t = idx.data(d_ptr->m_Role).userType();
+            if (d_ptr->m_lBg.contains(t))
+                return d_ptr->m_lBg[t];
+        }
+        break;
+        case Qt::ForegroundRole: {
+            const auto t = idx.data(d_ptr->m_Role).userType();
+            if (d_ptr->m_lFg.contains(t))
+                return d_ptr->m_lFg[idx.data(d_ptr->m_Role).userType()];
+        }
+        break;
     };
 
     return QIdentityProxyModel::data(idx, role);
